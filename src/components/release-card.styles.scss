@@ -1,0 +1,78 @@
+$card-bg: #ffffff;
+$card-border-color: #e9ecef;
+$text-muted: #6c757d;
+$text-body: #212529;
+$primary-color: #0d6efd;
+$success-color: #198754;
+$warning-color: #ffc107;
+$light-bg: #f8f9fa;
+
+:host {
+  display: block;
+}
+
+.card {
+  border: 1px solid $card-border-color;
+  border-radius: 0.5rem;
+  background-color: $card-bg;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.card-header {
+  background: linear-gradient(to right, #f8f9fa, #ffffff);
+  border-bottom: 1px solid $card-border-color;
+  padding: 1rem 1.25rem;
+
+  .h5 {
+    font-weight: 500;
+  }
+
+  a {
+    color: $text-body;
+    &:hover {
+      color: $primary-color;
+    }
+  }
+}
+
+.card-body {
+  padding: 1.25rem;
+}
+
+.list-unstyled {
+  font-size: 0.9rem;
+  li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem !important;
+    i {
+      color: $text-muted;
+      width: 24px;
+    }
+  }
+}
+
+.latest-release {
+  border-left: 4px solid $success-color;
+}
+
+.pre-release {
+  border-left: 4px solid $warning-color;
+}
+
+code {
+  font-size: 0.85em;
+  background-color: $light-bg;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}

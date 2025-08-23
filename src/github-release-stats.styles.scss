@@ -1,0 +1,13 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: 'Roboto', sans-serif;
+  background-color: #f8f9fa;
+}
+main {
+  flex: 1 0 auto;
+}
+code {
+  font-family: 'Roboto Mono', monospace;
+}

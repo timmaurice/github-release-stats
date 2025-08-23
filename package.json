@@ -1,0 +1,51 @@
+{
+  "name": "github-release-stats",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/timmaurice/github-release-stats#readme",
+  "bugs": {
+    "url": "https://github.com/timmaurice/github-release-stats/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timmaurice/github-release-stats.git"
+  },
+  "license": "MIT",
+  "author": "Tim Maurice Bayer",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "format": "npx prettier . --write",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@fontsource/roboto": "^5.2.6",
+    "@fontsource/roboto-mono": "^5.2.6",
+    "@octokit/rest": "^22.0.0",
+    "@types/sortablejs": "^1.15.8",
+    "bootstrap": "5.3.7",
+    "bootstrap-icons": "^1.13.1",
+    "chart.js": "^4.5.0",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "chartjs-plugin-zoom": "^2.2.0",
+    "date-fns": "^4.1.0",
+    "lit": "^3.3.1",
+    "sortablejs": "^1.15.6"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-lit": "^1.15.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-wc": "^2.2.1",
+    "prettier": "^3.6.2",
+    "sass": "^1.77.8",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.3"
+  }
+}
