@@ -394,7 +394,8 @@ export class GithubReleaseStats extends LitElement {
 
     // Reset form
     this._newRepository = ''
-    this._repoSuggestions = []
+    // Do not clear suggestions, as they are still valid for the current user.
+    // this._repoSuggestions = []
   }
 
   private _handleRemoveRepo(repoToRemove: {
