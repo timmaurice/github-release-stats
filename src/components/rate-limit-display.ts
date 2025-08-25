@@ -2,11 +2,13 @@ import { LitElement, html } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { Octokit } from '@octokit/rest'
 import { formatDistanceToNow } from 'date-fns'
+import { LocalizeController } from '../localization/localize-controller.js'
 
 @customElement('rate-limit-display')
 export class RateLimitDisplay extends LitElement {
   @property({ attribute: false })
   octokit?: Octokit
+  private localize = new LocalizeController(this)
 
   @state() private _limit = 0
   @state() private _remaining = 0
@@ -45,7 +47,7 @@ export class RateLimitDisplay extends LitElement {
       this._lastUpdated = new Date()
     } catch (error) {
       console.error('Failed to fetch rate limit:', error)
-      this._error = 'Could not fetch rate limit.'
+      this._error = this.localize.t('rateLimit.error')
       this._lastUpdated = null
     } finally {
       this._loading = false
@@ -85,7 +87,9 @@ export class RateLimitDisplay extends LitElement {
 
     const lastUpdatedText = this._lastUpdated
       ? html`<div class="text-muted mb-1" style="font-size: 0.75em;">
-          Updated ${this._getLastUpdatedTime()}
+          ${this.localize.t('rateLimit.updated', {
+            time: this._getLastUpdatedTime(),
+          })}
         </div>`
       : ''
 
@@ -99,7 +103,10 @@ export class RateLimitDisplay extends LitElement {
           <div
             class="progress"
             style="height: 10px;"
-            title="${this._remaining} / ${this._limit} requests remaining"
+            title="${this.localize.t('rateLimit.remaining', {
+              remaining: this._remaining,
+              limit: this._limit,
+            })}"
           >
             <div
               class="progress-bar ${progressBarClass}"
@@ -121,7 +128,9 @@ export class RateLimitDisplay extends LitElement {
                 >
                   <i class="bi bi-arrow-clockwise"></i>
                 </button>
-                Resets ${this._getResetTime()}`}
+                ${this.localize.t('rateLimit.resets', {
+                  time: this._getResetTime(),
+                })}`}
         </div>
       </div>
     `

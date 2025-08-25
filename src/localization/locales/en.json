@@ -1,0 +1,95 @@
+{
+  "app": {
+    "title": "GitHub Release Stats",
+    "madeWith": "Made with <i class=\"bi bi-heart-fill text-danger\"></i> using Lit & Bootstrap.",
+    "language": "Language"
+  },
+  "search": {
+    "username": "Username",
+    "repository": "Repository",
+    "getStats": "Get Stats",
+    "addRepository": "Add Repository",
+    "loadSuggestions": "Load Suggestions",
+    "userHasRepos": "User <strong>{user}</strong> has {count} repositories."
+  },
+  "comparison": {
+    "title": "Compare Releases",
+    "description": "Enter a GitHub username and repository to see download statistics and compare them with others.",
+    "comparing": "Comparing:",
+    "loadSet": "Or load a saved set",
+    "sets": "Sets",
+    "saveSet": "Save current set...",
+    "manageSets": "Manage sets...",
+    "copyLink": "Copy Link",
+    "copied": "Copied!",
+    "exportCsv": "Export CSV",
+    "clearAll": "Clear All"
+  },
+  "summaryTable": {
+    "repository": "Repository",
+    "stars": "Stars",
+    "openIssues": "Open Issues",
+    "latestVersion": "Latest Version",
+    "lastUpdate": "Last Update",
+    "size": "Size (KB)",
+    "totalDownloads": "Total Downloads"
+  },
+  "charts": {
+    "releaseDate": "Release Date",
+    "totalDownloads": "Total Downloads",
+    "cumulativeStars": "Cumulative Stars",
+    "assetSize": "Total Asset Size (KB)",
+    "openIssues": "Open Issues",
+    "date": "Date",
+    "linear": "Linear",
+    "logarithmic": "Logarithmic",
+    "resetZoom": "Reset Zoom",
+    "zoomHint": "Use mouse wheel to zoom, and click and drag to pan."
+  },
+  "releaseDetails": {
+    "title": "Release Details",
+    "totalDownloads": "Total Downloads: {count}",
+    "releaseTag": "Release Tag",
+    "name": "Name",
+    "published": "Published",
+    "downloads": "Downloads",
+    "noReleases": "No releases found.",
+    "author": "Author:",
+    "assets": "Assets",
+    "downloadsCount": "{count} downloads."
+  },
+  "rateLimit": {
+    "remaining": "{remaining} / {limit} requests remaining",
+    "resets": "Resets {time}",
+    "updated": "Updated {time}",
+    "error": "Could not fetch rate limit."
+  },
+  "settings": {
+    "apiAuth": "API Authentication",
+    "apiAuthDescription": "Provide a <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub Personal Access Token</a> to increase the API rate limit from 60 to 5,000 requests per hour. The token is stored only in your browser's session storage.",
+    "status": "Status:",
+    "authenticated": "Authenticated",
+    "anonymous": "Anonymous",
+    "save": "Save",
+    "clear": "Clear",
+    "toggleTheme": "Toggle theme"
+  },
+  "modals": {
+    "saveSetTitle": "Save Comparison Set",
+    "saveSetPlaceholder": "Enter a name for this set",
+    "saveSetButton": "Save Set",
+    "manageSetsTitle": "Manage Saved Sets",
+    "noSavedSets": "No saved sets found.",
+    "close": "Close"
+  },
+  "errors": {
+    "authRequired": "An API key is required to view history for Stars or Open Issues. Please add a GitHub Personal Access Token in the settings below to enable this feature.",
+    "fetchRepoData": "An error occurred while fetching repository data. One or more repositories might not exist or the API rate limit was exceeded.",
+    "fetchStarHistory": "Failed to fetch star history data.",
+    "fetchIssueHistory": "Failed to fetch issue history data.",
+    "rateLimitExceeded": "You've hit the GitHub API rate limit. Please wait a while before trying again.",
+    "networkError": "A network error occurred while checking the user.",
+    "addRepoToSave": "Add at least one repository to save a set.",
+    "copyLinkFailed": "Failed to copy link."
+  }
+}

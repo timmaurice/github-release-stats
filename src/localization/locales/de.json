@@ -1,0 +1,95 @@
+{
+  "app": {
+    "title": "GitHub Release-Statistiken",
+    "madeWith": "Erstellt mit <i class=\"bi bi-heart-fill text-danger\"></i> mittels Lit & Bootstrap.",
+    "language": "Sprache"
+  },
+  "search": {
+    "username": "Benutzername",
+    "repository": "Repository",
+    "getStats": "Statistiken abrufen",
+    "addRepository": "Repository hinzufügen",
+    "loadSuggestions": "Vorschläge laden",
+    "userHasRepos": "Benutzer <strong>{user}</strong> hat {count} Repositories."
+  },
+  "comparison": {
+    "title": "Releases vergleichen",
+    "description": "Geben Sie einen GitHub-Benutzernamen und ein Repository ein, um Download-Statistiken anzuzeigen und sie mit anderen zu vergleichen.",
+    "comparing": "Vergleiche:",
+    "loadSet": "Oder ein gespeichertes Set laden",
+    "sets": "Sets",
+    "saveSet": "Aktuelles Set speichern...",
+    "manageSets": "Sets verwalten...",
+    "copyLink": "Link kopieren",
+    "copied": "Kopiert!",
+    "exportCsv": "CSV exportieren",
+    "clearAll": "Alle löschen"
+  },
+  "summaryTable": {
+    "repository": "Repository",
+    "stars": "Sterne",
+    "openIssues": "Offene Issues",
+    "latestVersion": "Neueste Version",
+    "lastUpdate": "Letztes Update",
+    "size": "Größe (KB)",
+    "totalDownloads": "Downloads gesamt"
+  },
+  "charts": {
+    "releaseDate": "Veröffentlichungsdatum",
+    "totalDownloads": "Downloads gesamt",
+    "cumulativeStars": "Sterne kumulativ",
+    "assetSize": "Gesamtgröße der Assets (KB)",
+    "openIssues": "Offene Issues",
+    "date": "Datum",
+    "linear": "Linear",
+    "logarithmic": "Logarithmisch",
+    "resetZoom": "Zoom zurücksetzen",
+    "zoomHint": "Zum Zoomen das Mausrad verwenden und zum Verschieben klicken und ziehen."
+  },
+  "releaseDetails": {
+    "title": "Release-Details",
+    "totalDownloads": "Downloads gesamt: {count}",
+    "releaseTag": "Release-Tag",
+    "name": "Name",
+    "published": "Veröffentlicht",
+    "downloads": "Downloads",
+    "noReleases": "Keine Releases gefunden.",
+    "author": "Autor:",
+    "assets": "Assets",
+    "downloadsCount": "{count} Downloads."
+  },
+  "rateLimit": {
+    "remaining": "{remaining} / {limit} Anfragen übrig",
+    "resets": "Zurücksetzung {time}",
+    "updated": "Aktualisiert {time}",
+    "error": "Rate-Limit konnte nicht abgerufen werden."
+  },
+  "settings": {
+    "apiAuth": "API-Authentifizierung",
+    "apiAuthDescription": "Stellen Sie ein <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">persönliches GitHub-Zugriffstoken</a> bereit, um das API-Ratenlimit von 60 auf 5.000 Anfragen pro Stunde zu erhöhen. Das Token wird nur im Sitzungsspeicher Ihres Browsers gespeichert.",
+    "status": "Status:",
+    "authenticated": "Authentifiziert",
+    "anonymous": "Anonym",
+    "save": "Speichern",
+    "clear": "Löschen",
+    "toggleTheme": "Theme umschalten"
+  },
+  "modals": {
+    "saveSetTitle": "Vergleichs-Set speichern",
+    "saveSetPlaceholder": "Geben Sie einen Namen für dieses Set ein",
+    "saveSetButton": "Set speichern",
+    "manageSetsTitle": "Gespeicherte Sets verwalten",
+    "noSavedSets": "Keine gespeicherten Sets gefunden.",
+    "close": "Schließen"
+  },
+  "errors": {
+    "authRequired": "Ein API-Schlüssel ist erforderlich, um den Verlauf für Sterne oder offene Issues anzuzeigen. Bitte fügen Sie ein persönliches GitHub-Zugriffstoken in den Einstellungen hinzu, um diese Funktion zu aktivieren.",
+    "fetchRepoData": "Beim Abrufen der Repository-Daten ist ein Fehler aufgetreten. Ein oder mehrere Repositories existieren möglicherweise nicht oder das API-Ratenlimit wurde überschritten.",
+    "fetchStarHistory": "Fehler beim Abrufen der Stern-Verlaufsdaten.",
+    "fetchIssueHistory": "Fehler beim Abrufen der Issue-Verlaufsdaten.",
+    "rateLimitExceeded": "Sie haben das GitHub-API-Ratenlimit erreicht. Bitte warten Sie eine Weile, bevor Sie es erneut versuchen.",
+    "networkError": "Beim Überprüfen des Benutzers ist ein Netzwerkfehler aufgetreten.",
+    "addRepoToSave": "Fügen Sie mindestens ein Repository hinzu, um ein Set zu speichern.",
+    "copyLinkFailed": "Link konnte nicht kopiert werden."
+  }
+}

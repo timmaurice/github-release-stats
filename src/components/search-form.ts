@@ -1,5 +1,6 @@
 import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
+import { LocalizeController } from '../localization/localize-controller.js'
 
 @customElement('search-form')
 export class SearchForm extends LitElement {
@@ -8,6 +9,7 @@ export class SearchForm extends LitElement {
   @property({ type: Array }) suggestions: string[] = []
   @property({ type: String }) buttonText = 'Get Stats'
   @property({ type: Boolean }) suggestionsLoading = false
+  private localize = new LocalizeController(this)
 
   // Disable shadow DOM to inherit global styles.
   protected createRenderRoot() {
@@ -45,16 +47,20 @@ export class SearchForm extends LitElement {
       <form @submit=${this._handleSubmit}>
         <div class="row g-2 align-items-center">
           <div class="col-lg">
-            <label for="username-input" class="visually-hidden">Username</label>
+            <label for="username-input" class="visually-hidden"
+              >${this.localize.t('search.username')}</label
+            >
             <div class="input-group">
-              <span class="input-group-text" title="Username"
+              <span
+                class="input-group-text"
+                title=${this.localize.t('search.username')}
                 ><i class="bi bi-person-fill"></i
               ></span>
               <input
                 id="username-input"
                 type="text"
                 class="form-control"
-                placeholder="Username"
+                placeholder=${this.localize.t('search.username')}
                 .value=${this.username}
                 @input=${this._handleUsernameInput}
                 @change=${this._handleUsernameChange}
@@ -64,10 +70,13 @@ export class SearchForm extends LitElement {
           </div>
           <div class="col-lg">
             <label for="repository-input" class="visually-hidden"
-              >Repository</label
+              >${this.localize.t('search.repository')}</label
             >
             <div class="input-group">
-              <span class="input-group-text" title="Repository">
+              <span
+                class="input-group-text"
+                title=${this.localize.t('search.repository')}
+              >
                 ${this.suggestionsLoading
                   ? html`<span
                       class="spinner-border spinner-border-sm"
@@ -80,7 +89,7 @@ export class SearchForm extends LitElement {
                 id="repository-input"
                 type="text"
                 class="form-control"
-                placeholder="Repository"
+                placeholder=${this.localize.t('search.repository')}
                 list="repo-suggestions"
                 ?disabled=${this.suggestionsLoading}
                 .value=${this.repository}

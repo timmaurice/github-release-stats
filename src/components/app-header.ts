@@ -1,5 +1,6 @@
 import { LitElement, html } from 'lit'
 import { customElement } from 'lit/decorators.js'
+import { LocalizeController } from '../localization/localize-controller.js'
 
 @customElement('app-header')
 export class AppHeader extends LitElement {
@@ -7,15 +8,16 @@ export class AppHeader extends LitElement {
   protected createRenderRoot() {
     return this
   }
+  private localize = new LocalizeController(this)
 
   render() {
     return html`
       <header>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
           <div class="container">
-            <a class="navbar-brand" href="/">
+            <a class="navbar-brand" href="/github-release-stats/">
               <i class="bi bi-github"></i>
-              GitHub Release Stats
+              ${this.localize.t('app.title')}
             </a>
           </div>
         </nav>

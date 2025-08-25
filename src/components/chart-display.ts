@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
+import { LocalizeController } from '../localization/localize-controller.js'
 import type { GitHubRelease } from '../types.js'
 import { Chart, registerables } from 'chart.js'
 // By importing the adapter, it automatically registers itself with Chart.js
@@ -30,11 +31,17 @@ const chartColors = [
 
 @customElement('chart-display')
 export class ChartDisplay extends LitElement {
+  private localize = new LocalizeController(this)
+
   @property({ attribute: false })
   releasesData: Map<string, GitHubRelease[]> = new Map()
 
   @property({ attribute: false })
   stargazersData: Map<string, { starred_at: string }[]> = new Map()
+
+  @property({ attribute: false })
+  issuesData: Map<string, { created_at: string; closed_at: string | null }[]> =
+    new Map()
 
   @property({ type: Array })
   repoOrder: string[] = []
@@ -123,14 +130,19 @@ export class ChartDisplay extends LitElement {
             time: {
               tooltipFormat: 'MMM dd, yyyy',
             },
-            title: { display: true, text: 'Release Date' },
+            title: {
+              display: true,
+              text: this.localize.t('charts.releaseDate'),
+            },
           },
           y: {
             type: this.yAxisScale,
             title: {
               display: true,
-              text: `Total Downloads (${
-                this.yAxisScale === 'logarithmic' ? 'Logarithmic' : 'Linear'
+              text: `${this.localize.t('charts.totalDownloads')} (${
+                this.yAxisScale === 'logarithmic'
+                  ? this.localize.t('charts.logarithmic')
+                  : this.localize.t('charts.linear')
               })`,
             },
             beginAtZero: this.yAxisScale === 'linear',
@@ -210,14 +222,16 @@ export class ChartDisplay extends LitElement {
             time: {
               tooltipFormat: 'MMM dd, yyyy',
             },
-            title: { display: true, text: 'Date' },
+            title: { display: true, text: this.localize.t('charts.date') },
           },
           y: {
             type: this.yAxisScale,
             title: {
               display: true,
-              text: `Cumulative Stars (${
-                this.yAxisScale === 'logarithmic' ? 'Logarithmic' : 'Linear'
+              text: `${this.localize.t('charts.cumulativeStars')} (${
+                this.yAxisScale === 'logarithmic'
+                  ? this.localize.t('charts.logarithmic')
+                  : this.localize.t('charts.linear')
               })`,
             },
             beginAtZero: this.yAxisScale === 'linear',
@@ -288,14 +302,114 @@ export class ChartDisplay extends LitElement {
             time: {
               tooltipFormat: 'MMM dd, yyyy',
             },
-            title: { display: true, text: 'Release Date' },
+            title: {
+              display: true,
+              text: this.localize.t('charts.releaseDate'),
+            },
           },
           y: {
             type: this.yAxisScale,
             title: {
               display: true,
-              text: `Total Asset Size (KB) (${
-                this.yAxisScale === 'logarithmic' ? 'Logarithmic' : 'Linear'
+              text: `${this.localize.t('charts.assetSize')} (${
+                this.yAxisScale === 'logarithmic'
+                  ? this.localize.t('charts.logarithmic')
+                  : this.localize.t('charts.linear')
+              })`,
+            },
+            beginAtZero: this.yAxisScale === 'linear',
+          },
+        },
+        plugins: {
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
+            zoom: {
+              wheel: {
+                enabled: true,
+              },
+              pinch: {
+                enabled: true,
+              },
+              mode: 'x',
+            },
+          },
+        },
+      },
+    }
+  }
+
+  private _getIssueChartConfig(): ChartConfiguration {
+    const datasets: ChartDataset<'line', Point[]>[] = []
+    let colorIndex = 0
+
+    const order =
+      this.repoOrder.length > 0
+        ? this.repoOrder
+        : Array.from(this.issuesData.keys())
+
+    order.forEach((repoIdentifier) => {
+      const issues = this.issuesData.get(repoIdentifier)
+      if (!issues || issues.length === 0) return
+
+      const eventsByTime = new Map<number, number>()
+      issues.forEach((issue) => {
+        const createdTime = new Date(issue.created_at).getTime()
+        eventsByTime.set(createdTime, (eventsByTime.get(createdTime) || 0) + 1)
+        if (issue.closed_at) {
+          const closedTime = new Date(issue.closed_at).getTime()
+          eventsByTime.set(closedTime, (eventsByTime.get(closedTime) || 0) - 1)
+        }
+      })
+
+      const sortedTimes = Array.from(eventsByTime.keys()).sort((a, b) => a - b)
+
+      let openIssues = 0
+      const data: Point[] = []
+      if (sortedTimes.length > 0) {
+        data.push({ x: sortedTimes[0] - 1, y: 0 })
+      }
+
+      for (const time of sortedTimes) {
+        openIssues += eventsByTime.get(time)!
+        data.push({ x: time, y: openIssues })
+      }
+
+      datasets.push({
+        label: repoIdentifier,
+        data: data,
+        borderColor: chartColors[colorIndex % chartColors.length],
+        backgroundColor: chartColors[colorIndex % chartColors.length],
+        fill: false,
+        stepped: true,
+      })
+      colorIndex++
+    })
+
+    return {
+      type: 'line',
+      data: { datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              tooltipFormat: 'MMM dd, yyyy',
+            },
+            title: { display: true, text: this.localize.t('charts.date') },
+          },
+          y: {
+            type: this.yAxisScale,
+            title: {
+              display: true,
+              text: `${this.localize.t('charts.openIssues')} (${
+                this.yAxisScale === 'logarithmic'
+                  ? this.localize.t('charts.logarithmic')
+                  : this.localize.t('charts.linear')
               })`,
             },
             beginAtZero: this.yAxisScale === 'linear',
@@ -328,6 +442,8 @@ export class ChartDisplay extends LitElement {
         return this._getAssetSizeChartConfig()
       case 'stars':
         return this._getStarChartConfig()
+      case 'openIssues':
+        return this._getIssueChartConfig()
       default:
         return this._getLineChartConfig()
     }
@@ -355,7 +471,7 @@ export class ChartDisplay extends LitElement {
   render() {
     return html`<div
       class="chart-container"
-      title="Use mouse wheel to zoom, click and drag to pan"
+      title=${this.localize.t('charts.zoomHint')}
     >
       <canvas></canvas>
     </div>`

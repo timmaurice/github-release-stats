@@ -1,5 +1,6 @@
 import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
+import { LocalizeController } from '../localization/localize-controller.js'
 
 export interface RepoSummary {
   identifier: string
@@ -8,12 +9,15 @@ export interface RepoSummary {
   lastUpdate: string
   size: number // in KB
   totalDownloads: number
+  openIssues: number
 }
 
 export type SortKey = keyof Omit<RepoSummary, 'identifier'> | 'manual'
 
 @customElement('summary-table')
 export class SummaryTable extends LitElement {
+  private localize = new LocalizeController(this)
+
   @property({ attribute: false })
   summaryData: RepoSummary[] = []
 
@@ -43,7 +47,7 @@ export class SummaryTable extends LitElement {
   }
 
   private _formatDate(dateString: string): string {
-    if (!dateString) return 'N/A'
+    if (!dateString) return this.localize.t('common.notAvailable')
     return new Date(dateString).toLocaleDateString()
   }
 
@@ -56,17 +60,19 @@ export class SummaryTable extends LitElement {
 
     const headerKeys: SortKey[] = [
       'stars',
+      'openIssues',
       'latestVersion',
       'lastUpdate',
       'size',
       'totalDownloads',
     ]
     const labels: Record<SortKey, string> = {
-      stars: 'Stars',
-      latestVersion: 'Latest Version',
-      lastUpdate: 'Last Update',
-      size: 'Size (KB)',
-      totalDownloads: 'Total Downloads',
+      stars: this.localize.t('summaryTable.stars'),
+      latestVersion: this.localize.t('summaryTable.latestVersion'),
+      lastUpdate: this.localize.t('summaryTable.lastUpdate'),
+      size: this.localize.t('summaryTable.size'),
+      totalDownloads: this.localize.t('summaryTable.totalDownloads'),
+      openIssues: this.localize.t('summaryTable.openIssues'),
       manual: 'Manual',
     }
 
@@ -79,7 +85,7 @@ export class SummaryTable extends LitElement {
         <table class="table table-hover">
           <thead>
             <tr>
-              <th scope="col">Repository</th>
+              <th scope="col">${this.localize.t('summaryTable.repository')}</th>
               ${headerKeys.map(
                 (key) =>
                   html`<th
@@ -99,6 +105,9 @@ export class SummaryTable extends LitElement {
                 <tr>
                   <td class="fw-bold">${repo.identifier}</td>
                   <td class="text-end">${this._formatNumber(repo.stars)}</td>
+                  <td class="text-end">
+                    ${this._formatNumber(repo.openIssues)}
+                  </td>
                   <td class="text-end">${repo.latestVersion}</td>
                   <td class="text-end">${this._formatDate(repo.lastUpdate)}</td>
                   <td class="text-end">${this._formatNumber(repo.size)}</td>

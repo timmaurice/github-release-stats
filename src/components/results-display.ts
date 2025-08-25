@@ -1,6 +1,7 @@
 import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
+import { LocalizeController } from '../localization/localize-controller.js'
 import type { GitHubRelease as BaseGitHubRelease } from '../types.js'
 
 // The base type from types.ts seems to be missing the 'name' property.
@@ -11,6 +12,7 @@ type GitHubRelease = BaseGitHubRelease & { name: string | null }
 export class ResultsDisplay extends LitElement {
   @property({ type: Array }) releases: GitHubRelease[] = []
   @property({ type: String }) error = ''
+  private localize = new LocalizeController(this)
 
   // Disable shadow DOM to inherit global styles.
   protected createRenderRoot() {
@@ -22,7 +24,7 @@ export class ResultsDisplay extends LitElement {
   }
 
   private _formatDate(dateString: string): string {
-    if (!dateString) return 'N/A'
+    if (!dateString) return this.localize.t('common.notAvailable')
     return new Date(dateString).toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
@@ -35,7 +37,8 @@ export class ResultsDisplay extends LitElement {
       return html`
         <div class="alert alert-danger" role="alert">
           <h4 class="alert-heading">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>Oops!
+            <i class="bi bi-exclamation-triangle-fill me-2"></i
+            >${this.localize.t('errors.oops')}
           </h4>
           <p class="mb-0">${unsafeHTML(this.error)}</p>
         </div>
@@ -43,7 +46,9 @@ export class ResultsDisplay extends LitElement {
     }
 
     if (this.releases.length === 0 && !this.error) {
-      return html`<div class="alert alert-info m-2">No releases found.</div>`
+      return html`<div class="alert alert-info m-2">
+        ${this.localize.t('releaseDetails.noReleases')}
+      </div>`
     }
 
     return html`
@@ -51,10 +56,14 @@ export class ResultsDisplay extends LitElement {
         <table class="table table-striped table-hover mb-0">
           <thead>
             <tr>
-                <th scope="col">Release Tag</th>
-                <th scope="col">Name</th>
-                <th scope="col" class="text-center">Published</th>
-                <th scope="col" class="text-end">Total Downloads</th>
+              <th scope="col">${this.localize.t('releaseDetails.releaseTag')}</th>
+              <th scope="col">${this.localize.t('releaseDetails.name')}</th>
+              <th scope="col" class="text-center">
+                ${this.localize.t('releaseDetails.published')}
+              </th>
+              <th scope="col" class="text-end">
+                ${this.localize.t('releaseDetails.totalDownloads')}
+              </th>
               </tr>
             </thead>
             <tbody>

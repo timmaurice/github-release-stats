@@ -2,12 +2,14 @@ import { LitElement, html, css, unsafeCSS } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { map } from 'lit/directives/map.js'
 import type { GitHubRelease } from '../types.js'
+import { LocalizeController } from '../localization/localize-controller.js'
 import styleString from './release-card.styles.scss?inline'
 
 @customElement('release-card')
 export class ReleaseCard extends LitElement {
   @property({ type: Object }) release!: GitHubRelease
   @property({ type: String }) badgeText = ''
+  private localize = new LocalizeController(this)
 
   createRenderRoot() {
     return this
@@ -56,12 +58,16 @@ export class ReleaseCard extends LitElement {
           <div class="row">
             <div class="col-md-6 mb-3 mb-md-0">
               <h4 class="h6 text-muted mb-3">
-                <i class="bi bi-info-circle me-2"></i>Release Info
+                <i class="bi bi-info-circle me-2"></i>${this.localize.t(
+                  'releaseDetails.releaseInfo'
+                )}
               </h4>
               <ul class="list-unstyled">
                 ${this.release.author
                   ? html`<li class="mb-2">
-                      <i class="bi bi-person me-2"></i>Author:
+                      <i class="bi bi-person me-2"></i>${this.localize.t(
+                        'releaseDetails.author'
+                      )}
                       <a
                         href="${this.release.author.html_url}"
                         class="text-decoration-none"
@@ -70,12 +76,16 @@ export class ReleaseCard extends LitElement {
                     </li>`
                   : ''}
                 <li class="mb-2">
-                  <i class="bi bi-calendar-event me-2"></i>Published:
+                  <i class="bi bi-calendar-event me-2"></i>${this.localize.t(
+                    'releaseDetails.published'
+                  )}:
                   ${this.release.published_at.split('T')[0]}
                 </li>
                 ${releaseDownloadCount
                   ? html`<li>
-                      <i class="bi bi-download me-2"></i>Downloads:
+                      <i class="bi bi-download me-2"></i>${this.localize.t(
+                        'releaseDetails.downloads'
+                      )}:
                       ${this._formatNumber(releaseDownloadCount)}
                     </li>`
                   : ''}
@@ -85,7 +95,8 @@ export class ReleaseCard extends LitElement {
               ? html`
                   <div class="col-md-6">
                     <h4 class="h6 text-muted mb-3">
-                      <i class="bi bi-box-arrow-down me-2"></i>Assets
+                      <i class="bi bi-box-arrow-down me-2"></i
+                      >${this.localize.t('releaseDetails.assets')}
                     </h4>
                     <ul class="list-unstyled">
                       ${map(
@@ -95,8 +106,15 @@ export class ReleaseCard extends LitElement {
                             <code>${asset.name}</code>
                             <div class="text-muted">
                               (${(asset.size / 1048576.0).toFixed(2)}&nbsp;MiB)
-                              - ${this._formatNumber(asset.download_count)}
-                              downloads.
+                              -
+                              ${this.localize.t(
+                                'releaseDetails.downloadsCount',
+                                {
+                                  count: this._formatNumber(
+                                    asset.download_count
+                                  ),
+                                }
+                              )}
                             </div>
                           </li>
                         `

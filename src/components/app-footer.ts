@@ -1,5 +1,7 @@
 import { LitElement, html } from 'lit'
 import { customElement } from 'lit/decorators.js'
+import { unsafeHTML } from 'lit/directives/unsafe-html.js'
+import { LocalizeController } from '../localization/localize-controller.js'
 
 @customElement('app-footer')
 export class AppFooter extends LitElement {
@@ -7,6 +9,7 @@ export class AppFooter extends LitElement {
   protected createRenderRoot() {
     return this
   }
+  private localize = new LocalizeController(this)
 
   render() {
     return html`
@@ -15,8 +18,7 @@ export class AppFooter extends LitElement {
           class="container d-flex justify-content-between align-items-center flex-wrap gap-2 py-3"
         >
           <span class="text-muted"
-            >Made with <i class="bi bi-heart-fill text-danger"></i> using Lit &
-            Bootstrap.</span
+            >${unsafeHTML(this.localize.t('app.madeWith'))}</span
           >
           <slot></slot>
         </div>
