@@ -368,12 +368,13 @@ export class ChartDisplay extends LitElement {
 
       let openIssues = 0
       const data: Point[] = []
-      if (sortedTimes.length > 0) {
+      // Add a starting point for the chart at y=0 before the first event.
+      if (sortedTimes[0] !== undefined) {
         data.push({ x: sortedTimes[0] - 1, y: 0 })
       }
 
       for (const time of sortedTimes) {
-        openIssues += eventsByTime.get(time)!
+        openIssues += eventsByTime.get(time) ?? 0
         data.push({ x: time, y: openIssues })
       }
 
