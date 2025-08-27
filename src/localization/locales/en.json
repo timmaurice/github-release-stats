@@ -48,7 +48,7 @@
   },
   "releaseDetails": {
     "title": "Release Details",
-    "totalDownloads": "Total Downloads: {count}",
+    "totalDownloads": "Total Downloads",
     "releaseTag": "Release Tag",
     "name": "Name",
     "published": "Published",
@@ -66,7 +66,7 @@
   },
   "settings": {
     "apiAuth": "API Authentication",
-    "apiAuthDescription": "Provide a <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub Personal Access Token</a> to increase the API rate limit from 60 to 5,000 requests per hour. The token is stored only in your browser's session storage.",
+    "apiAuthDescription": "Provide a <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub Personal Access Token</a> to increase the API rate limit from 60 to 5,000 requests per hour. The token is stored only in your browser's local storage.",
     "status": "Status:",
     "authenticated": "Authenticated",
     "anonymous": "Anonymous",

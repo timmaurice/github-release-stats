@@ -84,9 +84,8 @@ export class ReleaseCard extends LitElement {
                 ${releaseDownloadCount
                   ? html`<li>
                       <i class="bi bi-download me-2"></i>${this.localize.t(
-                        'releaseDetails.downloads'
-                      )}:
-                      ${this._formatNumber(releaseDownloadCount)}
+                        'releaseDetails.totalDownloads'
+                      )}
                     </li>`
                   : ''}
               </ul>

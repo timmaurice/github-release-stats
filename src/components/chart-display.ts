@@ -101,6 +101,7 @@ export class ChartDisplay extends LitElement {
           ),
           label: release.tag_name,
         }))
+        .filter((d) => d.y > 0)
         .sort((a, b) => a.x - b.x)
 
       datasets.push({
@@ -277,6 +278,7 @@ export class ChartDisplay extends LitElement {
           y: release.assets.reduce((sum, asset) => sum + asset.size, 0) / 1024, // bytes to KB
           label: release.tag_name,
         }))
+        .filter((d) => d.y > 0)
         .sort((a, b) => a.x - b.x)
 
       datasets.push({

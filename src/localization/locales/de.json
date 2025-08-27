@@ -48,7 +48,7 @@
   },
   "releaseDetails": {
     "title": "Release-Details",
-    "totalDownloads": "Downloads gesamt: {count}",
+    "totalDownloads": "Downloads gesamt",
     "releaseTag": "Release-Tag",
     "name": "Name",
     "published": "Veröffentlicht",

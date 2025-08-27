@@ -73,7 +73,7 @@ export class GithubReleaseStats extends LitElement {
   constructor() {
     super()
     this._initializeTheme()
-    const token = sessionStorage.getItem('github-token') || ''
+    const token = localStorage.getItem('github-token') || ''
     this._githubToken = token
     this.octokit = new Octokit({ auth: token || undefined })
     this._loadSetsFromStorage()
@@ -732,9 +732,9 @@ export class GithubReleaseStats extends LitElement {
     this._githubToken = token
     this.octokit = new Octokit({ auth: token || undefined })
     if (token) {
-      sessionStorage.setItem('github-token', token)
+      localStorage.setItem('github-token', token)
     } else {
-      sessionStorage.removeItem('github-token')
+      localStorage.removeItem('github-token')
     }
     // After changing the token, refetch data if applicable.
     if (this._repos.length > 0) {
@@ -1293,17 +1293,14 @@ export class GithubReleaseStats extends LitElement {
                                 ><i class="bi bi-github me-2"></i>
                                 ${repoIdentifier}</strong
                               >
-                              <span
-                                class="text-muted text-nowrap flex-shrink-0"
+                              <span class="text-muted text-nowrap flex-shrink-0"
                                 >${this.localize.t(
-                                  'releaseDetails.totalDownloads',
-                                  {
-                                    count: new Intl.NumberFormat().format(
-                                      totalDownloads
-                                    ),
-                                  }
+                                  'releaseDetails.totalDownloads'
                                 )}
                                 <span class="badge bg-primary rounded-pill ms-2"
+                                  >${new Intl.NumberFormat().format(
+                                    totalDownloads
+                                  )}</span
                                 ></span
                               >
                             </div>

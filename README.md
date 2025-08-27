@@ -19,7 +19,7 @@ A web application to visualize and compare download statistics, star history, an
 
 ## 🚀 Live Demo
 
-**(Link to your live demo here)**
+**Link to your live demo [here](https://timmaurice.github.io/github-release-stats/)**
 
 ## 🛠️ How to Use
 
@@ -37,7 +37,7 @@ By default, the GitHub API has a rate limit of 60 requests per hour for unauthen
 
 1.  Scroll to the bottom of the page and expand the "API Authentication" section.
 2.  Paste your token into the input field and click "Save".
-3.  The token is stored securely in your browser's `sessionStorage` and is only sent to the GitHub API. It will be cleared when you close the browser tab.
+3.  The token is stored securely in your browser's `localStorage` and is only sent to the GitHub API. It will persist in your browser until you clear it.
 
 ## 💻 Running Locally
 
