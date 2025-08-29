@@ -1,9 +1,9 @@
 import { LitElement, html, css, unsafeCSS } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { map } from 'lit/directives/map.js'
-import type { GitHubRelease } from '../types.js'
-import { LocalizeController } from '../localization/localize-controller.js'
-import styleString from './release-card.styles.scss?inline'
+import type { GitHubRelease } from '../types'
+import { LocalizeController } from '../localization/localize-controller'
+import styleString from './styles/main.scss?inline'
 
 @customElement('release-card')
 export class ReleaseCard extends LitElement {

@@ -32,7 +32,8 @@
     "latestVersion": "Neueste Version",
     "lastUpdate": "Letztes Update",
     "size": "Größe (KB)",
-    "totalDownloads": "Downloads gesamt"
+    "totalDownloads": "Downloads gesamt",
+    "viewOnGitHub": "Auf GitHub ansehen"
   },
   "charts": {
     "releaseDate": "Veröffentlichungsdatum",
@@ -80,7 +81,21 @@
     "saveSetButton": "Set speichern",
     "manageSetsTitle": "Gespeicherte Sets verwalten",
     "noSavedSets": "Keine gespeicherten Sets gefunden.",
-    "close": "Schließen"
+    "close": "Schließen",
+    "updated": "Aktualisiert!",
+    "updateSet": "Set mit aktuellen Repositories aktualisieren",
+    "deleteSet": "Set löschen",
+    "confirmClearAllTitle": "Alle löschen bestätigen",
+    "confirmDeleteSetTitle": "Set löschen bestätigen",
+    "confirmButton": "Bestätigen",
+    "cancelButton": "Abbrechen"
+  },
+  "common": {
+    "notAvailable": "N/A"
+  },
+  "prompts": {
+    "confirmClearAll": "Möchten Sie wirklich alle Repositories löschen?",
+    "confirmDeleteSet": "Möchten Sie das Set '{setName}' wirklich löschen?"
   },
   "errors": {
     "authRequired": "Ein API-Schlüssel ist erforderlich, um den Verlauf für Sterne oder offene Issues anzuzeigen. Bitte fügen Sie ein persönliches GitHub-Zugriffstoken in den Einstellungen hinzu, um diese Funktion zu aktivieren.",

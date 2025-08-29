@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
-import { LocalizeController } from '../localization/localize-controller.js'
+import { LocalizeController } from '../localization/localize-controller'
 
 @customElement('search-form')
 export class SearchForm extends LitElement {

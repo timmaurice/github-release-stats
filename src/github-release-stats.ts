@@ -1,24 +1,24 @@
 import { LitElement, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
-import type { GitHubRelease } from './types.js'
+import type { GitHubRelease } from './types'
 import { Octokit } from '@octokit/rest'
-import type { RepoSummary, SortKey } from './components/summary-table.js'
+import type { RepoSummary, SortKey } from './components/summary-table'
 import { Modal, Dropdown, Collapse } from 'bootstrap'
 import Sortable from 'sortablejs'
-import { LocalizeController } from './localization/localize-controller.js'
-import { getLocale, setLocale } from './localization/registry.js'
+import { LocalizeController } from './localization/localize-controller'
+import { getLocale, setLocale } from './localization/registry'
 
 // Import sub-components
-import type { ChartDisplay } from './components/chart-display.js'
-import './components/app-footer.js'
-import './components/app-header.js'
-import './components/chart-display.js'
-import './components/loading-spinner.js'
-import './components/results-display.js'
-import './components/rate-limit-display.js'
-import './components/summary-table.js'
-import './components/search-form.js'
+import type { ChartDisplay } from './components/chart-display'
+import './components/app-footer'
+import './components/app-header'
+import './components/chart-display'
+import './components/loading-spinner'
+import './components/results-display'
+import './components/rate-limit-display'
+import './components/summary-table'
+import './components/search-form'
 
 // Import global styles
 import 'bootstrap/dist/css/bootstrap.min.css'
@@ -35,6 +35,7 @@ export class GithubReleaseStats extends LitElement {
   // Modals
   private _saveSetModal: Modal | null = null
   private _manageSetsModal: Modal | null = null
+  private _confirmModal: Modal | null = null
   private _sortableInstance: Sortable | null = null
 
   private _storageKey = 'github-release-stats-sets'
@@ -69,6 +70,12 @@ export class GithubReleaseStats extends LitElement {
   @state() private _yAxisScale: 'linear' | 'logarithmic' = 'linear'
   @state() private _suggestionsLoading = false
   @state() private _savedSets: Record<string, string[]> = {}
+  @state() private _justUpdatedSet: string | null = null
+
+  // State for the generic confirmation modal
+  @state() private _confirmModalTitle = ''
+  @state() private _confirmModalBody = ''
+  @state() private _confirmAction: (() => void) | null = null
 
   constructor() {
     super()
@@ -103,6 +110,10 @@ export class GithubReleaseStats extends LitElement {
     const manageModalEl = this.querySelector('#manageSetsModal')
     if (manageModalEl && !this._manageSetsModal) {
       this._manageSetsModal = new Modal(manageModalEl)
+    }
+    const confirmModalEl = this.querySelector('#confirmModal')
+    if (confirmModalEl && !this._confirmModal) {
+      this._confirmModal = new Modal(confirmModalEl)
     }
 
     // Manually initialize Bootstrap components that rely on data attributes,
@@ -175,13 +186,12 @@ export class GithubReleaseStats extends LitElement {
 
   private _updateURL() {
     const url = new URL(window.location.href)
-    if (this._repos.length > 0) {
-      url.searchParams.set(
-        'repos',
-        this._repos.map((r) => `${r.username}/${r.repository}`).join(',')
-      )
+    // _repoOrder is the source of truth for the display order.
+    // Use it to construct the URL so the order is preserved.
+    if (this._repoOrder.length > 0) {
+      url.searchParams.set('repos', this._repoOrder.join(','))
     } else {
-      url.searchParams.delete('repos')
+      url.searchParams.delete('repos') // Clear if no repos
     }
     history.pushState({}, '', url)
   }
@@ -471,6 +481,7 @@ export class GithubReleaseStats extends LitElement {
     // Set sortKey to 'manual' to indicate that the order is custom
     // and not based on a column sort. This will also hide the sort icons.
     this._sortKey = 'manual'
+    this._updateURL()
   }
 
   private async _handleRequestSort(e: CustomEvent<SortKey>) {
@@ -514,6 +525,7 @@ export class GithubReleaseStats extends LitElement {
     })
 
     this._repoOrder = sorted.map((s) => s.identifier)
+    this._updateURL()
 
     // Lazy-load stargazer data only when the user sorts by stars
     if (newSortKey === 'stars') {
@@ -593,17 +605,34 @@ export class GithubReleaseStats extends LitElement {
   }
 
   private _handleClearAllRepos() {
-    this._repos = []
-    this._releasesData = new Map()
-    this._downloadsData = new Map()
-    this._stargazersData = new Map()
-    this._issuesData = new Map()
-    this._repoSummaryData = []
-    this._repoOrder = []
-    this._error = ''
-    this._authError = ''
-    // After clearing, update the URL which will also trigger a re-render to the initial state
-    this._updateURL()
+    const clearAction = () => {
+      this._repos = []
+      this._releasesData = new Map()
+      this._downloadsData = new Map()
+      this._stargazersData = new Map()
+      this._issuesData = new Map()
+      this._repoSummaryData = []
+      this._repoOrder = []
+      this._error = ''
+      this._authError = ''
+      // After clearing, update the URL which will also trigger a re-render to the initial state
+      this._updateURL()
+    }
+
+    this._showConfirmation(
+      this.localize.t('modals.confirmClearAllTitle'),
+      this.localize.t('prompts.confirmClearAll'),
+      clearAction
+    )
+  }
+
+  private _handleConfirmAction() {
+    if (this._confirmAction) {
+      this._confirmAction()
+    }
+    this._confirmModal?.hide()
+    // Reset for next use
+    this._confirmAction = null
   }
 
   private _handleSaveSetClick(e: Event) {
@@ -652,11 +681,33 @@ export class GithubReleaseStats extends LitElement {
   }
 
   private _handleDeleteSet(setName: string) {
-    // Create a new object without the deleted key
-    const newSets = { ...this._savedSets }
-    delete newSets[setName]
-    this._savedSets = newSets
+    const deleteAction = () => {
+      // Create a new object without the deleted key
+      const newSets = { ...this._savedSets }
+      delete newSets[setName]
+      this._savedSets = newSets
+      this._saveSetsToStorage()
+    }
+
+    this._showConfirmation(
+      this.localize.t('modals.confirmDeleteSetTitle'),
+      this.localize.t('prompts.confirmDeleteSet', { setName }),
+      deleteAction
+    )
+  }
+
+  private _handleUpdateSet(setName: string) {
+    const repoIdentifiers = this._repos.map(
+      (r) => `${r.username}/${r.repository}`
+    )
+    this._savedSets = { ...this._savedSets, [setName]: repoIdentifiers }
     this._saveSetsToStorage()
+
+    // Provide visual feedback
+    this._justUpdatedSet = setName
+    setTimeout(() => {
+      this._justUpdatedSet = null
+    }, 2000)
   }
 
   private _handleExportCsv() {
@@ -712,13 +763,15 @@ export class GithubReleaseStats extends LitElement {
   private _handleCopyLink() {
     const button = this.querySelector('#copy-link-button')
     if (!button) return
-    const originalText = button.innerHTML
+    const originalContent = button.innerHTML
 
     navigator.clipboard.writeText(window.location.href).then(
       () => {
-        button.innerHTML = `<i class="bi bi-check-lg me-2"></i> ${this.localize.t('comparison.copied')}`
+        button.innerHTML = `<i class="bi bi-check-lg me-sm-2"></i><span class="d-none d-sm-inline">${this.localize.t(
+          'comparison.copied'
+        )}</span>`
         setTimeout(() => {
-          button.innerHTML = originalText
+          button.innerHTML = originalContent
         }, 2000)
       },
       (err) => {
@@ -769,6 +822,17 @@ export class GithubReleaseStats extends LitElement {
   private _handleLanguageChange(e: Event, lang: string) {
     e.preventDefault()
     setLocale(lang)
+  }
+
+  private _showConfirmation(
+    title: string,
+    body: string,
+    onConfirm: () => void
+  ) {
+    this._confirmModalTitle = title
+    this._confirmModalBody = body
+    this._confirmAction = onConfirm
+    this._confirmModal?.show()
   }
 
   private _applyTheme() {
@@ -952,13 +1016,31 @@ export class GithubReleaseStats extends LitElement {
                           <li
                             class="list-group-item d-flex justify-content-between align-items-center"
                           >
-                            ${setName}
-                            <button
-                              class="btn btn-sm btn-outline-danger"
-                              @click=${() => this._handleDeleteSet(setName)}
+                            <span class="me-2"
+                              >${setName}
+                              ${this._justUpdatedSet === setName
+                                ? html`<span class="badge bg-success ms-2"
+                                    >${this.localize.t('modals.updated')}</span
+                                  >`
+                                : ''}</span
                             >
-                              <i class="bi bi-trash"></i>
-                            </button>
+                            <div class="btn-group btn-group-sm">
+                              <button
+                                class="btn btn-outline-primary"
+                                @click=${() => this._handleUpdateSet(setName)}
+                                title=${this.localize.t('modals.updateSet')}
+                                ?disabled=${this._repos.length === 0}
+                              >
+                                <i class="bi bi-arrow-clockwise"></i>
+                              </button>
+                              <button
+                                class="btn btn-outline-danger"
+                                @click=${() => this._handleDeleteSet(setName)}
+                                title=${this.localize.t('modals.deleteSet')}
+                              >
+                                <i class="bi bi-trash"></i>
+                              </button>
+                            </div>
                           </li>
                         `
                       )}
@@ -975,6 +1057,50 @@ export class GithubReleaseStats extends LitElement {
                 data-bs-dismiss="modal"
               >
                 ${this.localize.t('modals.close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    const confirmationModalTemplate = html`
+      <!-- Generic Confirmation Modal -->
+      <div
+        class="modal fade"
+        id="confirmModal"
+        tabindex="-1"
+        aria-labelledby="confirmModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="confirmModalLabel">
+                ${this._confirmModalTitle}
+              </h5>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              ></button>
+            </div>
+            <div class="modal-body">${this._confirmModalBody}</div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+              >
+                ${this.localize.t('modals.cancelButton')}
+              </button>
+              <button
+                type="button"
+                class="btn btn-danger"
+                @click=${this._handleConfirmAction}
+              >
+                ${this.localize.t('modals.confirmButton')}
               </button>
             </div>
           </div>
@@ -1059,7 +1185,9 @@ export class GithubReleaseStats extends LitElement {
                   class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4"
                 >
                   <div class="d-flex align-items-center flex-wrap gap-2">
-                    <strong class="me-2">${this.localize.t('comparison.comparing')}</strong>
+                    <strong class="me-2"
+                      >${this.localize.t('comparison.comparing')}</strong
+                    >
                     <div
                       id="repo-pills-container"
                       class="d-flex flex-wrap gap-2"
@@ -1099,7 +1227,10 @@ export class GithubReleaseStats extends LitElement {
                         data-bs-toggle="dropdown"
                         aria-expanded="false"
                       >
-                        <i class="bi bi-bookmark-star me-2"></i>${this.localize.t('comparison.sets')}
+                        <i class="bi bi-bookmark-star me-sm-2"></i
+                        ><span class="d-none d-sm-inline"
+                          >${this.localize.t('comparison.sets')}</span
+                        >
                       </button>
                       <ul class="dropdown-menu">
                         <li>
@@ -1110,11 +1241,9 @@ export class GithubReleaseStats extends LitElement {
                             >${this.localize.t('comparison.saveSet')}</a
                           >
                         </li>
-                        ${
-                          Object.keys(this._savedSets).length > 0
-                            ? html`<li><hr class="dropdown-divider" /></li>`
-                            : ''
-                        }
+                        ${Object.keys(this._savedSets).length > 0
+                          ? html`<li><hr class="dropdown-divider" /></li>`
+                          : ''}
                         ${Object.keys(this._savedSets).map(
                           (setName) => html`
                             <li>
@@ -1128,23 +1257,21 @@ export class GithubReleaseStats extends LitElement {
                             </li>
                           `
                         )}
-                        ${
-                          Object.keys(this._savedSets).length > 0
-                            ? html`
-                                <li><hr class="dropdown-divider" /></li>
-                                <li>
-                                  <a
-                                    class="dropdown-item"
-                                    href="#"
-                                    @click=${this._handleManageSetsClick}
-                                    >${this.localize.t(
-                                      'comparison.manageSets'
-                                    )}</a
-                                  >
-                                </li>
-                              `
-                            : ''
-                        }
+                        ${Object.keys(this._savedSets).length > 0
+                          ? html`
+                              <li><hr class="dropdown-divider" /></li>
+                              <li>
+                                <a
+                                  class="dropdown-item"
+                                  href="#"
+                                  @click=${this._handleManageSetsClick}
+                                  >${this.localize.t(
+                                    'comparison.manageSets'
+                                  )}</a
+                                >
+                              </li>
+                            `
+                          : ''}
                       </ul>
                     </div>
                     <button
@@ -1152,21 +1279,29 @@ export class GithubReleaseStats extends LitElement {
                       class="btn btn-outline-secondary"
                       @click=${this._handleCopyLink}
                     >
-                      <i class="bi bi-clipboard me-2"></i>${this.localize.t('comparison.copyLink')}
+                      <i class="bi bi-clipboard me-sm-2"></i
+                      ><span class="d-none d-sm-inline"
+                        >${this.localize.t('comparison.copyLink')}</span
+                      >
                     </button>
                     <button
                       class="btn btn-outline-secondary"
                       @click=${this._handleExportCsv}
                     >
-                      <i class="bi bi-download me-2"></i>${this.localize.t('comparison.exportCsv')}
+                      <i class="bi bi-download me-sm-2"></i
+                      ><span class="d-none d-sm-inline"
+                        >${this.localize.t('comparison.exportCsv')}</span
+                      >
                     </button>
                     <button
                       class="btn btn-outline-danger"
                       @click=${this._handleClearAllRepos}
                     >
-                      <i class="bi bi-trash me-2"></i>${this.localize.t('comparison.clearAll')}
+                      <i class="bi bi-trash me-sm-2"></i
+                      ><span class="d-none d-sm-inline"
+                        >${this.localize.t('comparison.clearAll')}</span
+                      >
                     </button>
-                  </div>
                   </div>
                 </div>
 
@@ -1187,21 +1322,15 @@ export class GithubReleaseStats extends LitElement {
                   </div>
                 </div>
 
-                ${
-                  this._error
-                    ? html`<div class="alert alert-warning">
-                        ${this._error}
-                      </div>`
-                    : ''
-                }
-                ${
-                  this._authError
-                    ? html`<div class="alert alert-info" role="alert">
-                        <i class="bi bi-info-circle-fill me-2"></i>${this
-                          ._authError}
-                      </div>`
-                    : ''
-                }
+                ${this._error
+                  ? html`<div class="alert alert-warning">${this._error}</div>`
+                  : ''}
+                ${this._authError
+                  ? html`<div class="alert alert-info" role="alert">
+                      <i class="bi bi-info-circle-fill me-2"></i>${this
+                        ._authError}
+                    </div>`
+                  : ''}
 
                 <summary-table
                   .summaryData=${this._repoSummaryData}
@@ -1227,8 +1356,9 @@ export class GithubReleaseStats extends LitElement {
                       @change=${() => this._handleScaleChange('logarithmic')}
                     />
                     <label class="btn btn-outline-secondary" for="scale-log"
-                      ><i class="bi bi-graph-up me-2"></i
-                      >${this.localize.t('charts.logarithmic')}</label
+                      ><i class="bi bi-graph-up me-2"></i>${this.localize.t(
+                        'charts.logarithmic'
+                      )}</label
                     >
 
                     <input
@@ -1246,12 +1376,15 @@ export class GithubReleaseStats extends LitElement {
                     >
                   </div>
                   <button
-                    class="btn btn-sm btn-outline-secondary"
+                    class="btn btn-sm btn-outline-secondary ms-2"
                     @click=${this._handleResetZoom}
+                    title=${this.localize.t('charts.resetZoom')}
                   >
-                    <i class="bi bi-arrow-counterclockwise me-2"></i
-                    >${this.localize.t('charts.resetZoom')}
-                  </div>
+                    <i class="bi bi-arrow-counterclockwise me-sm-2"></i
+                    ><span class="d-none d-sm-inline"
+                      >${this.localize.t('charts.resetZoom')}</span
+                    >
+                  </button>
                 </div>
 
                 <chart-display
@@ -1261,6 +1394,7 @@ export class GithubReleaseStats extends LitElement {
                   .repoOrder=${this._repoOrder}
                   .metric=${this._chartMetric}
                   .yAxisScale=${this._yAxisScale}
+                  .limitZoomOut=${true}
                 ></chart-display>
 
                 <div class="accordion" id="resultsAccordion">
@@ -1293,7 +1427,8 @@ export class GithubReleaseStats extends LitElement {
                                 ><i class="bi bi-github me-2"></i>
                                 ${repoIdentifier}</strong
                               >
-                              <span class="text-muted text-nowrap flex-shrink-0"
+                              <span
+                                class="d-none d-md-block text-muted text-nowrap flex-shrink-0"
                                 >${this.localize.t(
                                   'releaseDetails.totalDownloads'
                                 )}
@@ -1322,7 +1457,7 @@ export class GithubReleaseStats extends LitElement {
                   })}
                 </div>
               `}
-          ${authSettingsTemplate} ${modalsTemplate}
+          ${authSettingsTemplate} ${modalsTemplate} ${confirmationModalTemplate}
         </div>
       </main>
 
@@ -1359,6 +1494,14 @@ export class GithubReleaseStats extends LitElement {
                 href="#"
                 @click=${(e: Event) => this._handleLanguageChange(e, 'de')}
                 >Deutsch</a
+              >
+            </li>
+            <li>
+              <a
+                class="dropdown-item ${getLocale() === 'zh-CN' ? 'active' : ''}"
+                href="#"
+                @click=${(e: Event) => this._handleLanguageChange(e, 'zh-CN')}
+                >简体中文</a
               >
             </li>
           </ul>

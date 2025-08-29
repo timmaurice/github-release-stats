@@ -1,7 +1,7 @@
 import { LitElement, html } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
-import { LocalizeController } from '../localization/localize-controller.js'
+import { LocalizeController } from '../localization/localize-controller'
 
 @customElement('app-footer')
 export class AppFooter extends LitElement {

@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
-import { LocalizeController } from '../localization/localize-controller.js'
+import { LocalizeController } from '../localization/localize-controller'
 
 export interface RepoSummary {
   identifier: string
@@ -76,6 +76,17 @@ export class SummaryTable extends LitElement {
       manual: 'Manual',
     }
 
+    // Define responsive classes to hide less important columns on smaller screens.
+    // d-none hides by default.
+    // d-md-table-cell shows on medium screens and up.
+    // d-lg-table-cell shows on large screens and up.
+    const responsiveClasses: Partial<Record<SortKey, string>> = {
+      openIssues: 'd-none d-lg-table-cell',
+      latestVersion: 'd-none d-md-table-cell',
+      lastUpdate: 'd-none d-md-table-cell',
+      size: 'd-none d-lg-table-cell',
+    }
+
     const orderedData = this.repoOrder
       .map((id) => this.summaryData.find((d) => d.identifier === id))
       .filter((d): d is RepoSummary => d !== undefined)
@@ -90,7 +101,7 @@ export class SummaryTable extends LitElement {
                 (key) =>
                   html`<th
                     scope="col"
-                    class="text-end"
+                    class="text-end ${responsiveClasses[key] || ''}"
                     style="cursor: pointer;"
                     @click=${() => this._handleSort(key)}
                   >
@@ -103,14 +114,35 @@ export class SummaryTable extends LitElement {
             ${orderedData.map(
               (repo) => html`
                 <tr>
-                  <td class="fw-bold">${repo.identifier}</td>
+                  <td class="fw-bold">
+                    <div
+                      class="d-flex justify-content-between align-items-center"
+                    >
+                      <span>${repo.identifier}</span>
+                      <a
+                        href="https://github.com/${repo.identifier}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="btn btn-sm btn-link py-0 px-1"
+                        title=${this.localize.t('summaryTable.viewOnGitHub')}
+                      >
+                        <i class="bi bi-box-arrow-up-right"></i>
+                      </a>
+                    </div>
+                  </td>
                   <td class="text-end">${this._formatNumber(repo.stars)}</td>
-                  <td class="text-end">
+                  <td class="text-end ${responsiveClasses.openIssues}">
                     ${this._formatNumber(repo.openIssues)}
                   </td>
-                  <td class="text-end">${repo.latestVersion}</td>
-                  <td class="text-end">${this._formatDate(repo.lastUpdate)}</td>
-                  <td class="text-end">${this._formatNumber(repo.size)}</td>
+                  <td class="text-end ${responsiveClasses.latestVersion}">
+                    ${repo.latestVersion}
+                  </td>
+                  <td class="text-end ${responsiveClasses.lastUpdate}">
+                    ${this._formatDate(repo.lastUpdate)}
+                  </td>
+                  <td class="text-end ${responsiveClasses.size}">
+                    ${this._formatNumber(repo.size)}
+                  </td>
                   <td class="text-end">
                     ${this._formatNumber(repo.totalDownloads)}
                   </td>
@@ -121,5 +153,11 @@ export class SummaryTable extends LitElement {
         </table>
       </div>
     `
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'summary-table': SummaryTable
   }
 }

@@ -32,7 +32,8 @@
     "latestVersion": "Latest Version",
     "lastUpdate": "Last Update",
     "size": "Size (KB)",
-    "totalDownloads": "Total Downloads"
+    "totalDownloads": "Total Downloads",
+    "viewOnGitHub": "View on GitHub"
   },
   "charts": {
     "releaseDate": "Release Date",
@@ -80,7 +81,21 @@
     "saveSetButton": "Save Set",
     "manageSetsTitle": "Manage Saved Sets",
     "noSavedSets": "No saved sets found.",
-    "close": "Close"
+    "close": "Close",
+    "updated": "Updated!",
+    "updateSet": "Update set with current repositories",
+    "deleteSet": "Delete set",
+    "confirmClearAllTitle": "Confirm Clear All",
+    "confirmDeleteSetTitle": "Confirm Delete Set",
+    "confirmButton": "Confirm",
+    "cancelButton": "Cancel"
+  },
+  "common": {
+    "notAvailable": "N/A"
+  },
+  "prompts": {
+    "confirmClearAll": "Are you sure you want to clear all repositories?",
+    "confirmDeleteSet": "Are you sure you want to delete the set '{setName}'?"
   },
   "errors": {
     "authRequired": "An API key is required to view history for Stars or Open Issues. Please add a GitHub Personal Access Token in the settings below to enable this feature.",

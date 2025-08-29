@@ -1,5 +1,5 @@
 import type { ReactiveController } from 'lit'
-import { addSubscriber, removeSubscriber, t } from './registry.js'
+import { addSubscriber, removeSubscriber, t } from './registry'
 
 export class LocalizeController implements ReactiveController {
   host: import('lit').ReactiveElement

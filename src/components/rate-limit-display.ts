@@ -2,7 +2,7 @@ import { LitElement, html } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { Octokit } from '@octokit/rest'
 import { formatDistanceToNow } from 'date-fns'
-import { LocalizeController } from '../localization/localize-controller.js'
+import { LocalizeController } from '../localization/localize-controller'
 
 @customElement('rate-limit-display')
 export class RateLimitDisplay extends LitElement {

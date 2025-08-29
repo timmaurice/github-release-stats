@@ -1,0 +1,112 @@
+{
+  "app": {
+    "title": "GitHub 发行版统计",
+    "madeWith": "使用 Lit & Bootstrap <i class=\"bi bi-heart-fill text-danger\"></i> 精心制作。",
+    "language": "语言"
+  },
+  "search": {
+    "username": "用户名",
+    "repository": "仓库",
+    "getStats": "获取统计数据",
+    "addRepository": "添加仓库",
+    "loadSuggestions": "加载建议",
+    "userHasRepos": "用户 <strong>{user}</strong> 有 {count} 个仓库。"
+  },
+  "comparison": {
+    "title": "比较发行版",
+    "description": "输入 GitHub 用户名和仓库以查看下载统计数据并与其他仓库进行比较。",
+    "comparing": "正在比较：",
+    "loadSet": "或加载已保存的集合",
+    "sets": "集合",
+    "saveSet": "保存当前集合...",
+    "manageSets": "管理集合...",
+    "copyLink": "复制链接",
+    "copied": "已复制！",
+    "exportCsv": "导出 CSV",
+    "clearAll": "全部清除"
+  },
+  "summaryTable": {
+    "repository": "仓库",
+    "stars": "星标",
+    "openIssues": "未解决的 Issues",
+    "latestVersion": "最新版本",
+    "lastUpdate": "最后更新",
+    "size": "大小 (KB)",
+    "totalDownloads": "总下载量",
+    "viewOnGitHub": "在 GitHub 上查看"
+  },
+  "charts": {
+    "releaseDate": "发布日期",
+    "totalDownloads": "总下载量",
+    "cumulativeStars": "累计星标数",
+    "assetSize": "总资源大小 (KB)",
+    "openIssues": "未解决的 Issues",
+    "date": "日期",
+    "linear": "线性",
+    "logarithmic": "对数",
+    "resetZoom": "重置缩放",
+    "zoomHint": "使用鼠标滚轮缩放，点击并拖动平移。"
+  },
+  "releaseDetails": {
+    "title": "发行版详情",
+    "totalDownloads": "总下载量",
+    "releaseTag": "发行标签",
+    "name": "名称",
+    "published": "发布于",
+    "downloads": "下载量",
+    "noReleases": "未找到发行版。",
+    "author": "作者：",
+    "assets": "资源",
+    "downloadsCount": "{count} 次下载。",
+    "releaseInfo": "发行版信息"
+  },
+  "rateLimit": {
+    "remaining": "剩余 {remaining} / {limit} 次请求",
+    "resets": "将于 {time} 重置",
+    "updated": "更新于 {time}",
+    "error": "无法获取速率限制。"
+  },
+  "settings": {
+    "apiAuth": "API 认证",
+    "apiAuthDescription": "提供一个 <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub 个人访问令牌</a> 可将 API 速率限制从每小时 60 次请求提高到 5,000 次。该令牌仅存储在您浏览器的本地存储中。",
+    "status": "状态：",
+    "authenticated": "已认证",
+    "anonymous": "匿名",
+    "save": "保存",
+    "clear": "清除",
+    "toggleTheme": "切换主题"
+  },
+  "modals": {
+    "saveSetTitle": "保存比较集合",
+    "saveSetPlaceholder": "为此集合输入一个名称",
+    "saveSetButton": "保存集合",
+    "manageSetsTitle": "管理已保存的集合",
+    "noSavedSets": "未找到已保存的集合。",
+    "close": "关闭",
+    "updated": "已更新！",
+    "updateSet": "使用当前仓库更新集合",
+    "deleteSet": "删除集合",
+    "confirmClearAllTitle": "确认全部清除",
+    "confirmDeleteSetTitle": "确认删除集合",
+    "confirmButton": "确认",
+    "cancelButton": "取消"
+  },
+  "common": {
+    "notAvailable": "N/A"
+  },
+  "prompts": {
+    "confirmClearAll": "您确定要清除所有仓库吗？",
+    "confirmDeleteSet": "您确定要删除集合 '{setName}' 吗？"
+  },
+  "errors": {
+    "authRequired": "查看星标或未解决 Issues 的历史记录需要 API 密钥。请在下面的设置中添加一个 GitHub 个人访问令牌以启用此功能。",
+    "fetchRepoData": "获取仓库数据时发生错误。一个或多个仓库可能不存在，或者已超出 API 速率限制。",
+    "fetchStarHistory": "获取星标历史数据失败。",
+    "fetchIssueHistory": "获取 Issue 历史数据失败。",
+    "rateLimitExceeded": "您已达到 GitHub API 速率限制。请稍后再试。",
+    "networkError": "检查用户时发生网络错误。",
+    "addRepoToSave": "请至少添加一个仓库以保存集合。",
+    "copyLinkFailed": "复制链接失败。",
+    "oops": "哎呀！"
+  }
+}

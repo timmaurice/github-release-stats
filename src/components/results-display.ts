@@ -1,8 +1,8 @@
 import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
-import { LocalizeController } from '../localization/localize-controller.js'
-import type { GitHubRelease as BaseGitHubRelease } from '../types.js'
+import { LocalizeController } from '../localization/localize-controller'
+import type { GitHubRelease as BaseGitHubRelease } from '../types'
 
 // The base type from types.ts seems to be missing the 'name' property.
 // We extend it here to satisfy TypeScript, as the GitHub API does provide it.
