@@ -36,8 +36,7 @@ const lastValueLinePlugin = {
     const now = new Date().getTime()
     const nowX = xScale.getPixelForValue(now)
 
-    // Only draw if 'now' is within the visible chart area
-    if (nowX === null || nowX < xScale.left || nowX > xScale.right) {
+    if (nowX === null) {
       return
     }
 
@@ -97,8 +96,7 @@ const nowLinePlugin = {
     const now = new Date().getTime()
     const x = xScale.getPixelForValue(now)
 
-    // Only draw if 'now' is within the visible chart area
-    if (x !== null && x >= xScale.left && x <= xScale.right) {
+    if (x !== null) {
       ctx.save()
       ctx.beginPath()
       ctx.moveTo(x, top)

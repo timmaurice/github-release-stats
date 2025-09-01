@@ -1,6 +1,7 @@
 import { LitElement, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
+import { trackEvent, trackPageView } from './analytics'
 import type { GitHubRelease } from './types'
 import { Octokit } from '@octokit/rest'
 import type { RepoSummary, SortKey } from './components/summary-table'
@@ -194,6 +195,8 @@ export class GithubReleaseStats extends LitElement {
       url.searchParams.delete('repos') // Clear if no repos
     }
     history.pushState({}, '', url)
+    // Track the URL change as a page view in our SPA
+    trackPageView()
   }
 
   private _loadSetsFromStorage() {
@@ -428,7 +431,7 @@ export class GithubReleaseStats extends LitElement {
     }
   }
 
-  private _handleFormSubmit() {
+  private async _handleFormSubmit() {
     if (!this._newUsername || !this._newRepository) return
 
     const newRepo = {
@@ -443,7 +446,12 @@ export class GithubReleaseStats extends LitElement {
       )
     ) {
       this._repos = [...this._repos, newRepo]
-      this._fetchDataForRepos()
+      trackEvent('add_repository', {
+        event_category: 'engagement',
+        event_label: `${newRepo.username}/${newRepo.repository}`,
+      })
+      // Await the data fetch to ensure repoOrder is updated before the URL
+      await this._fetchDataForRepos()
       this._updateURL()
     }
 
@@ -595,6 +603,10 @@ export class GithubReleaseStats extends LitElement {
 
   private _handleScaleChange(scale: 'linear' | 'logarithmic') {
     this._yAxisScale = scale
+    trackEvent('change_scale', {
+      event_category: 'chart_interaction',
+      event_label: scale,
+    })
   }
 
   private _handleResetZoom() {
@@ -616,6 +628,10 @@ export class GithubReleaseStats extends LitElement {
       this._error = ''
       this._authError = ''
       // After clearing, update the URL which will also trigger a re-render to the initial state
+      trackEvent('clear_all_repos', {
+        event_category: 'engagement',
+        event_label: 'Clear All',
+      })
       this._updateURL()
     }
 
@@ -653,15 +669,24 @@ export class GithubReleaseStats extends LitElement {
       )
       this._savedSets = { ...this._savedSets, [setName]: repoIdentifiers }
       this._saveSetsToStorage()
+      trackEvent('save_set', {
+        event_category: 'engagement',
+        event_label: setName,
+        repo_count: repoIdentifiers.length,
+      })
       input.value = '' // Clear input
       this._saveSetModal?.hide()
     }
   }
 
-  private _handleLoadSet(e: Event, setName: string) {
+  private async _handleLoadSet(e: Event, setName: string) {
     e.preventDefault()
     const repoIdentifiers = this._savedSets[setName]
     if (repoIdentifiers) {
+      trackEvent('load_set', {
+        event_category: 'engagement',
+        event_label: setName,
+      })
       this._repos = repoIdentifiers
         .map((r) => {
           const [username, repository] = r.split('/')
@@ -670,7 +695,8 @@ export class GithubReleaseStats extends LitElement {
         .filter(
           (r): r is { username: string; repository: string } => r !== null
         )
-      this._fetchDataForRepos()
+      // Await the data fetch to ensure repoOrder is updated before the URL
+      await this._fetchDataForRepos()
       this._updateURL()
     }
   }
@@ -687,6 +713,10 @@ export class GithubReleaseStats extends LitElement {
       delete newSets[setName]
       this._savedSets = newSets
       this._saveSetsToStorage()
+      trackEvent('delete_set', {
+        event_category: 'engagement',
+        event_label: setName,
+      })
     }
 
     this._showConfirmation(
@@ -712,6 +742,11 @@ export class GithubReleaseStats extends LitElement {
 
   private _handleExportCsv() {
     if (this._repoSummaryData.length === 0) return
+    trackEvent('export_csv', {
+      event_category: 'engagement',
+      event_label: 'Export CSV',
+      repo_count: this._repos.length,
+    })
 
     const headers = [
       'Repository',
@@ -816,12 +851,20 @@ export class GithubReleaseStats extends LitElement {
   private _toggleTheme() {
     this._theme = this._theme === 'light' ? 'dark' : 'light'
     localStorage.setItem('theme', this._theme)
+    trackEvent('change_theme', {
+      event_category: 'ui_interaction',
+      event_label: this._theme,
+    })
     this._applyTheme()
   }
 
   private _handleLanguageChange(e: Event, lang: string) {
     e.preventDefault()
     setLocale(lang)
+    trackEvent('change_language', {
+      event_category: 'ui_interaction',
+      event_label: lang,
+    })
   }
 
   private _showConfirmation(
