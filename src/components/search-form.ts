@@ -37,6 +37,33 @@ export class SearchForm extends LitElement {
     )
   }
 
+  private _handleUsernamePaste(e: ClipboardEvent) {
+    if (!this.repository) this._handlePaste(e)
+  }
+
+  private _handleRepoPaste(e: ClipboardEvent) {
+    if (!this.username) this._handlePaste(e)
+  }
+
+  private _handlePaste(e: ClipboardEvent) {
+    const pastedText = e.clipboardData?.getData('text')
+    if (!pastedText) return
+    const match =
+      /^(?:https?:\/\/|git@)?(?:www\.)?(?:github\.com[:/])?(?<username>[a-zA-Z\-0-9]+)\/(?<repository>[a-zA-Z\-0-9._]+?)(?:\.git|\/|$)/.exec(
+        pastedText
+      )
+    if (!match) return
+    const { username, repository } = match.groups as {
+      username: string
+      repository: string
+    }
+    e.preventDefault()
+    this.dispatchEvent(new CustomEvent('username-input', { detail: username }))
+    this.dispatchEvent(
+      new CustomEvent('repository-input', { detail: repository })
+    )
+  }
+
   private _handleSubmit(e: Event) {
     e.preventDefault()
     this.dispatchEvent(new CustomEvent('form-submit'))
@@ -64,6 +91,7 @@ export class SearchForm extends LitElement {
                 .value=${this.username}
                 @input=${this._handleUsernameInput}
                 @change=${this._handleUsernameChange}
+                @paste=${this._handleUsernamePaste}
                 required
               />
             </div>
@@ -94,6 +122,7 @@ export class SearchForm extends LitElement {
                 ?disabled=${this.suggestionsLoading}
                 .value=${this.repository}
                 @input=${this._handleRepoInput}
+                @paste=${this._handleRepoPaste}
                 required
               />
             </div>
