@@ -5,9 +5,9 @@ globalThis.localStorage = {
   clear: () => {},
   length: 0,
   key: () => null,
-} as any;
+} as any
 globalThis.document = {
   documentElement: {
-    lang: 'en'
-  }
-} as any;
+    lang: 'en',
+  },
+} as any

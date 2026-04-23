@@ -72,7 +72,10 @@ export default defineConfig({
           if (id.includes('@octokit')) {
             return 'vendor-octokit'
           }
-          if (id.includes('node_modules/lit') || id.includes('node_modules/@lit')) {
+          if (
+            id.includes('node_modules/lit') ||
+            id.includes('node_modules/@lit')
+          ) {
             return 'vendor-lit'
           }
           if (id.includes('node_modules/bootstrap')) {
