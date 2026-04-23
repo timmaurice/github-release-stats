@@ -38,7 +38,8 @@
     "lastUpdate": "Letztes Update",
     "size": "Größe (KB)",
     "totalDownloads": "Downloads gesamt",
-    "viewOnGitHub": "Auf GitHub ansehen"
+    "viewOnGitHub": "Auf GitHub ansehen",
+    "exportReport": "Markdown-Bericht exportieren"
   },
   "charts": {
     "releaseDate": "Veröffentlichungsdatum",

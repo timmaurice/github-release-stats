@@ -38,7 +38,8 @@
     "lastUpdate": "最后更新",
     "size": "大小 (KB)",
     "totalDownloads": "总下载量",
-    "viewOnGitHub": "在 GitHub 上查看"
+    "viewOnGitHub": "在 GitHub 上查看",
+    "exportReport": "导出 Markdown 报告"
   },
   "charts": {
     "releaseDate": "发布日期",

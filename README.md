@@ -27,6 +27,11 @@ A web application to visualize and compare download statistics, star history, op
 - **Shareable URLs:** The URL automatically updates as you add or reorder repositories, making it easy to share your exact comparison.
 - **Export to CSV:** Download the summary table data for offline analysis.
 - **Copy as Markdown:** Instantly copy the comparison table in Markdown format, ready to paste into GitHub issues or documentation.
+- **Detailed Repository Reports:** Download a comprehensive Markdown report for any single repository, including its top releases and recent activity.
+
+### Performance
+
+- **IndexedDB Caching:** Historical data is cached locally to drastically speed up page loads and preserve your GitHub API rate limit.
 
 ### User Experience
 
@@ -101,6 +106,18 @@ To run this project on your local machine, follow these steps:
 
   ```bash
   bun run lint
+  ```
+
+- **Run unit tests:**
+
+  ```bash
+  bun test
+  ```
+
+- **Run E2E tests:**
+
+  ```bash
+  bun run test:e2e
   ```
 
 - **Format the code:**

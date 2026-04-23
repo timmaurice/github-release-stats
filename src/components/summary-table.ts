@@ -40,6 +40,12 @@ export class SummaryTable extends LitElement {
     this.dispatchEvent(new CustomEvent('request-sort', { detail: key }))
   }
 
+  private _handleExportReport(identifier: string) {
+    this.dispatchEvent(
+      new CustomEvent('export-repo-report', { detail: identifier })
+    )
+  }
+
   private _renderSortIcon(key: SortKey) {
     if (this.sortKey !== key) return ''
     return this.sortDirection === 'asc'
@@ -120,15 +126,25 @@ export class SummaryTable extends LitElement {
                       class="d-flex justify-content-between align-items-center"
                     >
                       <span>${repo.identifier}</span>
-                      <a
-                        href="https://github.com/${repo.identifier}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="btn btn-sm btn-link py-0 px-1"
-                        title=${this.localize.t('summaryTable.viewOnGitHub')}
-                      >
-                        <i class="bi bi-box-arrow-up-right"></i>
-                      </a>
+                      <div class="d-flex gap-1">
+                        <button
+                          class="btn btn-sm btn-link py-0 px-1 text-decoration-none"
+                          title=${this.localize.t('summaryTable.exportReport')}
+                          @click=${() =>
+                            this._handleExportReport(repo.identifier)}
+                        >
+                          <i class="bi bi-file-earmark-arrow-down"></i>
+                        </button>
+                        <a
+                          href="https://github.com/${repo.identifier}"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="btn btn-sm btn-link py-0 px-1 text-decoration-none"
+                          title=${this.localize.t('summaryTable.viewOnGitHub')}
+                        >
+                          <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                      </div>
                     </div>
                   </td>
                   <td class="text-end">${this._formatNumber(repo.stars)}</td>

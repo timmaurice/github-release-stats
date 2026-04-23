@@ -1,4 +1,8 @@
+import type { RestEndpointMethodTypes } from '@octokit/rest'
 import { Octokit } from '@octokit/rest'
+import { getCache, setCache } from './cache'
+
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 /**
  * Fetches the user data by username.
@@ -25,12 +29,23 @@ export async function getRepoReleases(
   octokit: Octokit,
   owner: string,
   repo: string
-) {
-  return await octokit.rest.repos.listReleases({
+): Promise<RestEndpointMethodTypes['repos']['listReleases']['response']> {
+  const cacheKey = `releases-${owner}-${repo}`
+  const cached =
+    await getCache<
+      RestEndpointMethodTypes['repos']['listReleases']['response']
+    >(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
+  const response = await octokit.rest.repos.listReleases({
     owner,
     repo,
     per_page: 30,
   })
+  await setCache(cacheKey, response)
+  return response
 }
 
 /**
@@ -55,6 +70,12 @@ export async function getStargazers(
   owner: string,
   repo: string
 ) {
+  const cacheKey = `stargazers-${owner}-${repo}`
+  const cached = await getCache<{ starred_at: string }[]>(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
   const stargazers: { starred_at: string }[] = []
   const iterator = octokit.paginate.iterator(
     octokit.rest.activity.listStargazersForRepo,
@@ -79,6 +100,8 @@ export async function getStargazers(
       break
     }
   }
+
+  await setCache(cacheKey, stargazers)
   return stargazers
 }
 
@@ -86,6 +109,13 @@ export async function getStargazers(
  * Fetches all issues (open and closed) with timestamps for a repository using pagination.
  */
 export async function getIssues(octokit: Octokit, owner: string, repo: string) {
+  const cacheKey = `issues-${owner}-${repo}`
+  const cached =
+    await getCache<{ created_at: string; closed_at: string | null }[]>(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
   const issues: { created_at: string; closed_at: string | null }[] = []
   const iterator = octokit.paginate.iterator(octokit.rest.issues.listForRepo, {
     owner,
@@ -111,5 +141,7 @@ export async function getIssues(octokit: Octokit, owner: string, repo: string) {
       break
     }
   }
+
+  await setCache(cacheKey, issues)
   return issues
 }

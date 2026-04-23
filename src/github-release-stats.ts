@@ -12,6 +12,7 @@ import { getLocale, setLocale } from './localization/registry'
 import {
   generateCsvContent,
   generateMarkdownContent,
+  generateSingleRepoMarkdownReport,
   downloadFile,
 } from './utils/export-helpers'
 import {
@@ -38,7 +39,6 @@ import './components/pwa-install-toast'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import '@fontsource/roboto/index.css'
-
 @customElement('github-release-stats')
 export class GithubReleaseStats extends LitElement {
   private localize = new LocalizeController(this)
@@ -483,6 +483,52 @@ export class GithubReleaseStats extends LitElement {
     // and not based on a column sort. This will also hide the sort icons.
     this._sortKey = 'manual'
     this._updateURL()
+  }
+
+  private async _handleExportReport(e: CustomEvent<string>) {
+    const identifier = e.detail
+    const summary = this._repoSummaryData.find(
+      (s) => s.identifier === identifier
+    )
+    if (!summary) return
+
+    const [username, repository] = identifier.split('/')
+    if (!username || !repository) return
+
+    this._loading = true
+    try {
+      if (!this._stargazersData.has(identifier)) {
+        const sg = await getStargazers(this.octokit, username, repository)
+        const newData = new Map(this._stargazersData)
+        newData.set(identifier, sg)
+        this._stargazersData = newData
+      }
+      if (!this._issuesData.has(identifier)) {
+        const iss = await getIssues(this.octokit, username, repository)
+        const newData = new Map(this._issuesData)
+        newData.set(identifier, iss)
+        this._issuesData = newData
+      }
+
+      const releases = this._releasesData.get(identifier) || []
+      const stargazers = this._stargazersData.get(identifier) || []
+      const issues = this._issuesData.get(identifier) || []
+
+      const markdownContent = generateSingleRepoMarkdownReport(
+        summary,
+        releases,
+        stargazers,
+        issues
+      )
+
+      const filename = `${username}-${repository}-report.md`
+      downloadFile(markdownContent, filename, 'text/markdown;charset=utf-8;')
+    } catch (err) {
+      console.error(err)
+      this._error = this.localize.t('errors.fetchRepoData')
+    } finally {
+      this._loading = false
+    }
   }
 
   private async _handleRequestSort(e: CustomEvent<SortKey>) {
@@ -1461,6 +1507,7 @@ export class GithubReleaseStats extends LitElement {
                   .sortKey=${this._sortKey}
                   .sortDirection=${this._sortDirection}
                   @request-sort=${this._handleRequestSort}
+                  @export-repo-report=${this._handleExportReport}
                 ></summary-table>
 
                 <div
