@@ -1,2 +1,3 @@
 [test]
 preload = ["./bun-test-setup.ts"]
+pathIgnorePatterns = ["tests/**"]

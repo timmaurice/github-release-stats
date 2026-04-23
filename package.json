@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "test": "bun test",
     "test:e2e": "playwright test",
     "format": "npx prettier . --write",
     "preview": "vite preview",
