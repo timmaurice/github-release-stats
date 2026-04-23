@@ -23,6 +23,11 @@
     "copyLink": "复制链接",
     "copied": "已复制！",
     "exportCsv": "导出 CSV",
+    "copyMarkdown": "复制 Markdown",
+    "markdownCopied": "已复制 Markdown！",
+    "pinDashboard": "固定到仪表板",
+    "unpinDashboard": "取消固定仪表板",
+    "pinned": "已固定！",
     "clearAll": "全部清除"
   },
   "summaryTable": {
@@ -48,7 +53,6 @@
     "zoomHint": "使用鼠标滚轮缩放，点击并拖动平移。"
   },
   "releaseDetails": {
-    "title": "发行版详情",
     "totalDownloads": "总下载量",
     "releaseTag": "发行标签",
     "name": "名称",

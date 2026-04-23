@@ -17,10 +17,11 @@ export class PwaInstallToast extends LitElement {
     return this
   }
 
-  firstUpdated() {
+  async firstUpdated() {
+    await this.updateComplete
     const toastEl = this.querySelector('.toast')
     if (toastEl) {
-      this._toast = new Toast(toastEl)
+      this._toast = Toast.getOrCreateInstance(toastEl, { autohide: false })
       this._toast.show()
     }
   }
@@ -34,7 +35,7 @@ export class PwaInstallToast extends LitElement {
   render() {
     return html`
       <div
-        class="toast align-items-center text-bg-primary border-0"
+        class="toast show align-items-center text-bg-primary border-0"
         role="alert"
         aria-live="assertive"
         aria-atomic="true"

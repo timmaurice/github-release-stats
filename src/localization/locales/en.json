@@ -23,6 +23,11 @@
     "copyLink": "Copy Link",
     "copied": "Copied!",
     "exportCsv": "Export CSV",
+    "copyMarkdown": "Copy Markdown",
+    "markdownCopied": "Copied Markdown!",
+    "pinDashboard": "Pin to Dashboard",
+    "unpinDashboard": "Unpin Dashboard",
+    "pinned": "Pinned!",
     "clearAll": "Clear All"
   },
   "summaryTable": {
@@ -48,7 +53,6 @@
     "zoomHint": "Use mouse wheel to zoom, and click and drag to pan."
   },
   "releaseDetails": {
-    "title": "Release Details",
     "totalDownloads": "Total Downloads",
     "releaseTag": "Release Tag",
     "name": "Name",
@@ -57,7 +61,8 @@
     "noReleases": "No releases found.",
     "author": "Author:",
     "assets": "Assets",
-    "downloadsCount": "{count} downloads."
+    "downloadsCount": "{count} downloads.",
+    "releaseInfo": "Release Info"
   },
   "rateLimit": {
     "remaining": "{remaining} / {limit} requests remaining",
@@ -105,7 +110,8 @@
     "rateLimitExceeded": "You've hit the GitHub API rate limit. Please wait a while before trying again.",
     "networkError": "A network error occurred while checking the user.",
     "addRepoToSave": "Add at least one repository to save a set.",
-    "copyLinkFailed": "Failed to copy link."
+    "copyLinkFailed": "Failed to copy link.",
+    "oops": "Oops!"
   },
   "pwa": {
     "installMessage": "Install this app for a better experience.",

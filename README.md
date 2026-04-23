@@ -23,8 +23,10 @@ A web application to visualize and compare download statistics, star history, op
 ### Data Management
 
 - **Save & Manage Sets:** Save your comparison sets and easily load them later.
+- **Pinned Dashboard:** Pin your favorite repository set so it automatically loads whenever you visit the app.
 - **Shareable URLs:** The URL automatically updates as you add or reorder repositories, making it easy to share your exact comparison.
 - **Export to CSV:** Download the summary table data for offline analysis.
+- **Copy as Markdown:** Instantly copy the comparison table in Markdown format, ready to paste into GitHub issues or documentation.
 
 ### User Experience
 

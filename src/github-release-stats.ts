@@ -9,6 +9,19 @@ import { Modal, Dropdown, Collapse } from 'bootstrap'
 import Sortable from 'sortablejs'
 import { LocalizeController } from './localization/localize-controller'
 import { getLocale, setLocale } from './localization/registry'
+import {
+  generateCsvContent,
+  generateMarkdownContent,
+  downloadFile,
+} from './utils/export-helpers'
+import {
+  getUserByUsername,
+  listUserRepos,
+  getRepoReleases,
+  getRepoDetails,
+  getStargazers,
+  getIssues,
+} from './utils/github-api'
 
 // Import sub-components
 import type { ChartDisplay } from './components/chart-display'
@@ -195,9 +208,20 @@ export class GithubReleaseStats extends LitElement {
 
   private _readStateFromURL() {
     const urlParams = new URLSearchParams(window.location.search)
-    const reposFromUrl = urlParams.get('repos')?.split(',') || []
+    let reposFromUrl = urlParams.get('repos')?.split(',')
 
-    const parsedRepos = reposFromUrl
+    if (!reposFromUrl && !window.location.search) {
+      const defaultDashboard = localStorage.getItem('default-dashboard')
+      if (defaultDashboard) {
+        try {
+          reposFromUrl = JSON.parse(defaultDashboard)
+        } catch (e) {
+          console.error('Failed to parse default dashboard', e)
+        }
+      }
+    }
+
+    const parsedRepos = (reposFromUrl || [])
       .map((r) => {
         const [username, repository] = r.split('/')
         return username && repository ? { username, repository } : null
@@ -269,14 +293,7 @@ export class GithubReleaseStats extends LitElement {
     this._suggestionsLoading = true
 
     try {
-      // Use octokit's pagination helper to fetch all repositories
-      const repos = await this.octokit.paginate(
-        this.octokit.rest.repos.listForUser,
-        {
-          username,
-          per_page: 100,
-        }
-      )
+      const repos = await listUserRepos(this.octokit, username)
       this._repoSuggestions = repos.map((repo) => repo.name)
     } catch (error) {
       console.error('Failed to fetch user repos:', error)
@@ -286,87 +303,21 @@ export class GithubReleaseStats extends LitElement {
     }
   }
 
-  private async _fetchStargazers(
-    owner: string,
-    repo: string
-  ): Promise<{ starred_at: string }[]> {
-    const stargazers: { starred_at: string }[] = []
-    const iterator = this.octokit.paginate.iterator(
-      this.octokit.rest.activity.listStargazersForRepo,
-      {
-        owner,
-        repo,
-        per_page: 100,
-        headers: {
-          accept: 'application/vnd.github.star+json',
-        },
-      }
-    )
-
-    let pageCount = 0
-    const MAX_STARGAZER_PAGES = 10 // Fetch up to 1000 stars to avoid hitting rate limits on very popular repos.
-
-    for await (const { data: pageData } of iterator) {
-      const typedPageData = pageData as { starred_at: string }[]
-      stargazers.push(...typedPageData)
-      pageCount++
-      if (pageCount >= MAX_STARGAZER_PAGES) {
-        break
-      }
-    }
-    return stargazers
-  }
-
-  private async _fetchIssues(
-    owner: string,
-    repo: string
-  ): Promise<{ created_at: string; closed_at: string | null }[]> {
-    const issues: { created_at: string; closed_at: string | null }[] = []
-    const iterator = this.octokit.paginate.iterator(
-      this.octokit.rest.issues.listForRepo,
-      {
-        owner,
-        repo,
-        per_page: 100,
-        state: 'all', // we need both open and closed to track over time
-      }
-    )
-
-    let pageCount = 0
-    // Fetch up to 1000 issues to avoid hitting rate limits on very popular repos.
-    const MAX_ISSUE_PAGES = 10
-
-    for await (const { data: pageData } of iterator) {
-      // The response contains pull requests as well, we should filter them out.
-      const issuesOnly = pageData.filter((issue) => !issue.pull_request)
-      issues.push(
-        ...issuesOnly.map((i) => ({
-          created_at: i.created_at,
-          closed_at: i.closed_at,
-        }))
-      )
-      pageCount++
-      if (pageCount >= MAX_ISSUE_PAGES) {
-        break
-      }
-    }
-    return issues
-  }
-
   private async _fetchDataForRepos() {
     this._loading = true
     this._error = ''
 
     const fetchPromises = this._repos.map(({ username, repository }) => {
-      const releasesPromise = this.octokit.rest.repos.listReleases({
-        owner: username,
-        repo: repository,
-        per_page: 30,
-      })
-      const repoDetailsPromise = this.octokit.rest.repos.get({
-        owner: username,
-        repo: repository,
-      })
+      const releasesPromise = getRepoReleases(
+        this.octokit,
+        username,
+        repository
+      )
+      const repoDetailsPromise = getRepoDetails(
+        this.octokit,
+        username,
+        repository
+      )
       return Promise.all([releasesPromise, repoDetailsPromise])
     })
 
@@ -446,9 +397,7 @@ export class GithubReleaseStats extends LitElement {
     this._error = '' // Clear previous errors
 
     try {
-      const { data: userData } = await this.octokit.rest.users.getByUsername({
-        username: this._newUsername,
-      })
+      const userData = await getUserByUsername(this.octokit, this._newUsername)
       const repoCount = userData.public_repos
 
       const SUGGESTION_THRESHOLD = 50
@@ -590,7 +539,7 @@ export class GithubReleaseStats extends LitElement {
         this._loading = true
         try {
           const stargazerPromises = reposToFetch.map((repo) =>
-            this._fetchStargazers(repo.username, repo.repository)
+            getStargazers(this.octokit, repo.username, repo.repository)
           )
           const results = await Promise.all(stargazerPromises)
 
@@ -622,7 +571,7 @@ export class GithubReleaseStats extends LitElement {
         this._loading = true
         try {
           const issuePromises = reposToFetch.map((repo) =>
-            this._fetchIssues(repo.username, repo.repository)
+            getIssues(this.octokit, repo.username, repo.repository)
           )
           const results = await Promise.all(issuePromises)
 
@@ -808,35 +757,12 @@ export class GithubReleaseStats extends LitElement {
       })
       .filter((d): d is RepoSummary => d !== undefined)
 
-    const rows = sortedData.map((repo) => {
-      // Sanitize data for CSV: escape commas and quotes
-      const escapeCsv = (str: string | number) => {
-        const s = String(str)
-        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-          return `"${s.replace(/"/g, '""')}"`
-        }
-        return s
-      }
-      return [
-        escapeCsv(repo.identifier),
-        repo.stars,
-        escapeCsv(repo.latestVersion),
-        repo.lastUpdate,
-        repo.size,
-        repo.totalDownloads,
-      ].join(',')
-    })
-
-    const csvContent = [headers.join(','), ...rows].join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', 'github-release-stats.csv')
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const csvContent = generateCsvContent(sortedData, headers)
+    downloadFile(
+      csvContent,
+      'github-release-stats.csv',
+      'text/csv;charset=utf-8;'
+    )
   }
 
   private _handleCopyLink() {
@@ -858,6 +784,71 @@ export class GithubReleaseStats extends LitElement {
         alert(this.localize.t('errors.copyLinkFailed')) // Simple feedback for failure
       }
     )
+  }
+
+  private _handleCopyMarkdown() {
+    if (this._repoSummaryData.length === 0) return
+    trackEvent('copy_markdown', {
+      event_category: 'engagement',
+      event_label: 'Copy Markdown',
+      repo_count: this._repos.length,
+    })
+
+    const button = this.querySelector('#copy-markdown-button')
+    if (!button) return
+    const originalContent = button.innerHTML
+
+    const headers = [
+      'Repository',
+      'Stars',
+      'Open Issues',
+      'Latest Version',
+      'Total Downloads',
+    ]
+
+    const sortedData = this._repoOrder
+      .map((identifier) =>
+        this._repoSummaryData.find((d) => d.identifier === identifier)
+      )
+      .filter((d): d is RepoSummary => d !== undefined)
+
+    const markdownContent = generateMarkdownContent(sortedData, headers)
+
+    navigator.clipboard.writeText(markdownContent).then(
+      () => {
+        button.innerHTML = `<i class="bi bi-check-lg me-sm-2"></i><span class="d-none d-sm-inline">${this.localize.t(
+          'comparison.markdownCopied'
+        )}</span>`
+        setTimeout(() => {
+          button.innerHTML = originalContent
+        }, 2000)
+      },
+      (err) => {
+        console.error('Could not copy text to clipboard: ', err)
+      }
+    )
+  }
+
+  private _handlePinDashboard() {
+    const button = this.querySelector('#pin-dashboard-button')
+    if (!button) return
+
+    const currentOrder = JSON.stringify(this._repoOrder)
+    const isCurrentlyPinned =
+      localStorage.getItem('default-dashboard') === currentOrder
+
+    if (isCurrentlyPinned) {
+      localStorage.removeItem('default-dashboard')
+      this.requestUpdate()
+    } else {
+      localStorage.setItem('default-dashboard', currentOrder)
+      button.innerHTML = `<i class="bi bi-pin-fill me-sm-2"></i><span class="d-none d-sm-inline">${this.localize.t(
+        'comparison.pinned'
+      )}</span>`
+      setTimeout(() => {
+        this.requestUpdate()
+      }, 2000)
+    }
   }
 
   private _updateAuthToken(token: string) {
@@ -1386,6 +1377,43 @@ export class GithubReleaseStats extends LitElement {
                       <i class="bi bi-download me-sm-2"></i
                       ><span class="d-none d-sm-inline"
                         >${this.localize.t('comparison.exportCsv')}</span
+                      >
+                    </button>
+                    <button
+                      id="copy-markdown-button"
+                      class="btn btn-outline-secondary"
+                      @click=${this._handleCopyMarkdown}
+                    >
+                      <i class="bi bi-markdown me-sm-2"></i
+                      ><span class="d-none d-sm-inline"
+                        >${this.localize.t('comparison.copyMarkdown')}</span
+                      >
+                    </button>
+                    <button
+                      id="pin-dashboard-button"
+                      class="btn btn-outline-secondary"
+                      @click=${this._handlePinDashboard}
+                      title=${this.localize.t(
+                        localStorage.getItem('default-dashboard') ===
+                          JSON.stringify(this._repoOrder)
+                          ? 'comparison.unpinDashboard'
+                          : 'comparison.pinDashboard'
+                      )}
+                    >
+                      <i
+                        class="bi ${localStorage.getItem(
+                          'default-dashboard'
+                        ) === JSON.stringify(this._repoOrder)
+                          ? 'bi-pin-fill'
+                          : 'bi-pin-angle'} me-sm-2"
+                      ></i
+                      ><span class="d-none d-sm-inline"
+                        >${this.localize.t(
+                          localStorage.getItem('default-dashboard') ===
+                            JSON.stringify(this._repoOrder)
+                            ? 'comparison.unpinDashboard'
+                            : 'comparison.pinDashboard'
+                        )}</span
                       >
                     </button>
                     <button
