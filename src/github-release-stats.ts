@@ -14,7 +14,6 @@ import { getLocale, setLocale } from './localization/registry'
 import type { ChartDisplay } from './components/chart-display'
 import './components/app-footer'
 import './components/app-header'
-import './components/chart-display'
 import './components/loading-spinner'
 import './components/results-display'
 import './components/rate-limit-display'
@@ -100,10 +99,13 @@ export class GithubReleaseStats extends LitElement {
       'beforeinstallprompt',
       this._handleBeforeInstallPrompt
     )
+
+    window.addEventListener('popstate', this._handlePopState)
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback()
+    window.removeEventListener('popstate', this._handlePopState)
     window.removeEventListener(
       'beforeinstallprompt',
       this._handleBeforeInstallPrompt
@@ -113,7 +115,12 @@ export class GithubReleaseStats extends LitElement {
       .removeEventListener('change', this._handleSystemThemeChange)
   }
 
-  updated() {
+  updated(changedProperties: Map<string, any>) {
+    if (changedProperties.has('_repos') && this._repos.length > 0) {
+      // Lazy load the chart component only when we have repositories to display
+      import('./components/chart-display').catch(console.error)
+    }
+
     // Initialize Bootstrap modals
     const saveModalEl = this.querySelector('#saveSetModal')
     if (saveModalEl && !this._saveSetModal) {
@@ -190,16 +197,36 @@ export class GithubReleaseStats extends LitElement {
     const urlParams = new URLSearchParams(window.location.search)
     const reposFromUrl = urlParams.get('repos')?.split(',') || []
 
-    this._repos = reposFromUrl
+    const parsedRepos = reposFromUrl
       .map((r) => {
         const [username, repository] = r.split('/')
         return username && repository ? { username, repository } : null
       })
       .filter((r): r is { username: string; repository: string } => r !== null)
 
+    const newRepoOrder = parsedRepos.map((r) => `${r.username}/${r.repository}`)
+    // Avoid re-fetching if the URL state exactly matches our current UI state
+    if (newRepoOrder.join(',') === this._repoOrder.join(',')) {
+      return
+    }
+
+    this._repos = parsedRepos
+
     if (this._repos.length > 0) {
       this._fetchDataForRepos()
+    } else {
+      // Silently clear all state if the URL was emptied (e.g. hitting back button to initial state)
+      this._releasesData = new Map()
+      this._downloadsData = new Map()
+      this._stargazersData = new Map()
+      this._issuesData = new Map()
+      this._repoSummaryData = []
+      this._repoOrder = []
     }
+  }
+
+  private _handlePopState = () => {
+    this._readStateFromURL()
   }
 
   private _updateURL() {

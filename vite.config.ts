@@ -63,5 +63,23 @@ export default defineConfig({
   ],
   build: {
     outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('chart.js') || id.includes('chartjs-')) {
+            return 'vendor-chartjs'
+          }
+          if (id.includes('@octokit')) {
+            return 'vendor-octokit'
+          }
+          if (id.includes('node_modules/lit') || id.includes('node_modules/@lit')) {
+            return 'vendor-lit'
+          }
+          if (id.includes('node_modules/bootstrap')) {
+            return 'vendor-bootstrap'
+          }
+        },
+      },
+    },
   },
 })
