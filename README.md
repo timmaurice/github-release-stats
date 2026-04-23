@@ -34,6 +34,13 @@ A web application to visualize and compare download statistics, star history, op
 - **Internationalization (i18n):** Available in English, German, and Simplified Chinese.
 - **GitHub API Authentication:** Enter a Personal Access Token to increase the API rate limit from 60 to 5,000 requests/hour.
 
+### Progressive Web App (PWA)
+
+- **Installable:** Install the application directly to your device (Desktop or Mobile) for a native app experience.
+- **Offline Support:** Service workers cache core assets to ensure the app loads quickly.
+- **Custom Window Controls:** Uses the Window Controls Overlay API for a seamless, native-looking title bar on Desktop.
+- **Protocol Handler:** Open the app automatically via custom `web+ghstats://` links (e.g., `web+ghstats://microsoft/vscode`).
+
 ## 🛠️ Getting Started
 
 1.  **Enter a Repository:** Start by typing a GitHub username (e.g., `microsoft`) and repository name (e.g., `vscode`).
@@ -104,10 +111,12 @@ To run this project on your local machine, follow these steps:
 - **Framework:** Lit
 - **Language:** TypeScript
 - **Bundler:** Vite
+- **PWA:** vite-plugin-pwa
 - **Styling:** Bootstrap 5, Bootstrap Icons & SASS
 - **Charting:** Chart.js, `chartjs-adapter-date-fns`, `chartjs-plugin-zoom`
 - **GitHub API:** Octokit.js
 - **Drag & Drop:** SortableJS
+- **Linting & Formatting:** ESLint (Flat Config) & Prettier
 
 ## 📄 License
 
