@@ -115,7 +115,7 @@ export class GithubReleaseStats extends LitElement {
       .removeEventListener('change', this._handleSystemThemeChange)
   }
 
-  updated(changedProperties: Map<string, any>) {
+  updated(changedProperties: Map<string, unknown>) {
     if (changedProperties.has('_repos') && this._repos.length > 0) {
       // Lazy load the chart component only when we have repositories to display
       import('./components/chart-display').catch(console.error)
