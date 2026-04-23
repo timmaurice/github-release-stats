@@ -106,5 +106,9 @@
     "networkError": "A network error occurred while checking the user.",
     "addRepoToSave": "Add at least one repository to save a set.",
     "copyLinkFailed": "Failed to copy link."
+  },
+  "pwa": {
+    "installMessage": "Install this app for a better experience.",
+    "installButton": "Install"
   }
 }

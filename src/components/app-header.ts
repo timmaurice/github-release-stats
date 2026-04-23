@@ -4,11 +4,12 @@ import { LocalizeController } from '../localization/localize-controller'
 
 @customElement('app-header')
 export class AppHeader extends LitElement {
+  private localize = new LocalizeController(this)
+
   // Disable shadow DOM to inherit global styles.
   protected createRenderRoot() {
     return this
   }
-  private localize = new LocalizeController(this)
 
   render() {
     return html`

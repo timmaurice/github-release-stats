@@ -108,5 +108,9 @@
     "addRepoToSave": "请至少添加一个仓库以保存集合。",
     "copyLinkFailed": "复制链接失败。",
     "oops": "哎呀！"
+  },
+  "pwa": {
+    "installMessage": "安装此应用以获得更好的体验。",
+    "installButton": "安装"
   }
 }

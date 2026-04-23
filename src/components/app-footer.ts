@@ -5,15 +5,16 @@ import { LocalizeController } from '../localization/localize-controller'
 
 @customElement('app-footer')
 export class AppFooter extends LitElement {
+  private localize = new LocalizeController(this)
+
   // Disable shadow DOM to inherit global styles.
   protected createRenderRoot() {
     return this
   }
-  private localize = new LocalizeController(this)
 
   render() {
     return html`
-      <footer class="footer mt-auto bg-body-tertiary border-top">
+      <footer class="footer bg-body-tertiary border-top">
         <div
           class="container d-flex justify-content-between align-items-center flex-wrap gap-2 py-3"
         >

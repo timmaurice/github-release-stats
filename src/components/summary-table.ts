@@ -1,6 +1,7 @@
 import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { LocalizeController } from '../localization/localize-controller'
+import { getLocale } from '../localization/registry'
 
 export interface RepoSummary {
   identifier: string
@@ -48,11 +49,11 @@ export class SummaryTable extends LitElement {
 
   private _formatDate(dateString: string): string {
     if (!dateString) return this.localize.t('common.notAvailable')
-    return new Date(dateString).toLocaleDateString()
+    return new Date(dateString).toLocaleDateString(getLocale())
   }
 
   private _formatNumber(num: number): string {
-    return new Intl.NumberFormat().format(num)
+    return new Intl.NumberFormat(getLocale()).format(num)
   }
 
   render() {

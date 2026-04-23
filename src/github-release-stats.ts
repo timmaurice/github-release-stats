@@ -2,7 +2,7 @@ import { LitElement, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 import { trackEvent, trackPageView } from './analytics'
-import type { GitHubRelease } from './types'
+import type { GitHubRelease, BeforeInstallPromptEvent } from './types'
 import { Octokit } from '@octokit/rest'
 import type { RepoSummary, SortKey } from './components/summary-table'
 import { Modal, Dropdown, Collapse } from 'bootstrap'
@@ -21,10 +21,11 @@ import './components/rate-limit-display'
 import './components/summary-table'
 import './components/search-form'
 
+import './components/pwa-install-toast'
 // Import global styles
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
-import '@fontsource/roboto'
+import '@fontsource/roboto/index.css'
 
 @customElement('github-release-stats')
 export class GithubReleaseStats extends LitElement {
@@ -73,6 +74,7 @@ export class GithubReleaseStats extends LitElement {
   @state() private _savedSets: Record<string, string[]> = {}
   @state() private _justUpdatedSet: string | null = null
 
+  @state() private _installPrompt: BeforeInstallPromptEvent | null = null
   // State for the generic confirmation modal
   @state() private _confirmModalTitle = ''
   @state() private _confirmModalBody = ''
@@ -93,10 +95,19 @@ export class GithubReleaseStats extends LitElement {
     window
       .matchMedia('(prefers-color-scheme: dark)')
       .addEventListener('change', this._handleSystemThemeChange)
+
+    window.addEventListener(
+      'beforeinstallprompt',
+      this._handleBeforeInstallPrompt
+    )
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback()
+    window.removeEventListener(
+      'beforeinstallprompt',
+      this._handleBeforeInstallPrompt
+    )
     window
       .matchMedia('(prefers-color-scheme: dark)')
       .removeEventListener('change', this._handleSystemThemeChange)
@@ -159,6 +170,12 @@ export class GithubReleaseStats extends LitElement {
         : 'light'
     }
     this._applyTheme()
+  }
+  private _handleBeforeInstallPrompt = (e: Event) => {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault()
+    // Stash the event so it can be triggered later.
+    this._installPrompt = e as BeforeInstallPromptEvent
   }
 
   private _handleSystemThemeChange = (e: MediaQueryListEvent) => {
@@ -858,6 +875,14 @@ export class GithubReleaseStats extends LitElement {
     this._applyTheme()
   }
 
+  private async _handlePwaInstall() {
+    if (this._installPrompt) {
+      await this._installPrompt.prompt()
+      // The prompt can only be used once.
+      this._installPrompt = null
+    }
+  }
+
   private _handleLanguageChange(e: Event, lang: string) {
     e.preventDefault()
     setLocale(lang)
@@ -1464,7 +1489,7 @@ export class GithubReleaseStats extends LitElement {
                             aria-expanded="false"
                           >
                             <div
-                              class="d-flex justify-content-between align-items-center w-100 me-3"
+                              class="d-flex justify-content-between align-items-center me-3"
                             >
                               <strong class="text-truncate me-3"
                                 ><i class="bi bi-github me-2"></i>
@@ -1476,7 +1501,7 @@ export class GithubReleaseStats extends LitElement {
                                   'releaseDetails.totalDownloads'
                                 )}
                                 <span class="badge bg-primary rounded-pill ms-2"
-                                  >${new Intl.NumberFormat().format(
+                                  >${new Intl.NumberFormat(getLocale()).format(
                                     totalDownloads
                                   )}</span
                                 ></span
@@ -1504,13 +1529,13 @@ export class GithubReleaseStats extends LitElement {
         </div>
       </main>
 
-      <app-footer>
+      <app-footer class="mt-auto d-block w-100">
         <rate-limit-display .octokit=${this.octokit}></rate-limit-display>
       </app-footer>
 
       <div
-        class="position-fixed top-0 end-0 p-2 d-flex gap-2"
-        style="z-index: 1030;"
+        class="position-fixed top-0 p-2 d-flex gap-2"
+        style="z-index: 1030; left: calc(env(titlebar-area-x, 0px) + env(titlebar-area-width, 100%)); transform: translateX(-100%);"
       >
         <div class="dropdown">
           <button
@@ -1563,6 +1588,16 @@ export class GithubReleaseStats extends LitElement {
         </button>
       </div>
 
+      ${this._installPrompt
+        ? html`
+            <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+              <pwa-install-toast
+                .installPrompt=${this._installPrompt}
+                @install-pwa=${this._handlePwaInstall}
+              ></pwa-install-toast>
+            </div>
+          `
+        : ''}
       ${this._loading ? html`<loading-spinner></loading-spinner>` : ''}
     `
   }

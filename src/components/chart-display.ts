@@ -132,9 +132,9 @@ interface ComponentZoomOptions {
 // Augment the Chart.js module to add types for our custom plugin.
 // This provides type safety and autocompletion for the plugin's options.
 declare module 'chart.js' {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface PluginOptionsByType<TType extends ChartType> {
     nowLine?: {
+      _type?: TType
       display?: boolean
       color?: string
       width?: number

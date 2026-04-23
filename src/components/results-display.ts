@@ -2,6 +2,7 @@ import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 import { LocalizeController } from '../localization/localize-controller'
+import { getLocale } from '../localization/registry'
 import type { GitHubRelease as BaseGitHubRelease } from '../types'
 
 // The base type from types.ts seems to be missing the 'name' property.
@@ -20,12 +21,12 @@ export class ResultsDisplay extends LitElement {
   }
 
   private _formatNumber(num: number): string {
-    return new Intl.NumberFormat().format(num)
+    return new Intl.NumberFormat(getLocale()).format(num)
   }
 
   private _formatDate(dateString: string): string {
     if (!dateString) return this.localize.t('common.notAvailable')
-    return new Date(dateString).toLocaleDateString(undefined, {
+    return new Date(dateString).toLocaleDateString(getLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

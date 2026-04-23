@@ -1,9 +1,9 @@
-import { LitElement, html, css, unsafeCSS } from 'lit'
+import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { map } from 'lit/directives/map.js'
 import type { GitHubRelease } from '../types'
 import { LocalizeController } from '../localization/localize-controller'
-import styleString from './styles/main.scss?inline'
+import { getLocale } from '../localization/registry'
 
 @customElement('release-card')
 export class ReleaseCard extends LitElement {
@@ -11,12 +11,13 @@ export class ReleaseCard extends LitElement {
   @property({ type: String }) badgeText = ''
   private localize = new LocalizeController(this)
 
-  createRenderRoot() {
+  // Disable shadow DOM to inherit global styles.
+  protected createRenderRoot() {
     return this
   }
 
   private _formatNumber(value: number): string {
-    return value.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1,')
+    return new Intl.NumberFormat(getLocale()).format(value)
   }
 
   render() {
@@ -127,12 +128,6 @@ export class ReleaseCard extends LitElement {
       </div>
     `
   }
-
-  static styles = [
-    css`
-      ${unsafeCSS(styleString)}
-    `,
-  ]
 }
 
 declare global {

@@ -111,6 +111,13 @@ export class RateLimitDisplay extends LitElement {
             <div
               class="progress-bar ${progressBarClass}"
               role="progressbar"
+              aria-label="${this.localize.t('rateLimit.remaining', {
+                remaining: this._remaining,
+                limit: this._limit,
+              })}"
+              aria-valuenow="${this._remaining}"
+              aria-valuemin="0"
+              aria-valuemax="${this._limit}"
               style="width: ${percentage}%"
             ></div>
           </div>

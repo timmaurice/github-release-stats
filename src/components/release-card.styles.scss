@@ -11,6 +11,26 @@ $light-bg: #f8f9fa;
   display: block;
 }
 
+:host {
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Roboto', sans-serif;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+code {
+  font-family: 'Roboto Mono', monospace;
+}
+
+.accordion-header .accordion-button > div {
+  max-width: calc(100% - 40px);
+}
+
 .card {
   border: 1px solid $card-border-color;
   border-radius: 0.5rem;

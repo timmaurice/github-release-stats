@@ -106,5 +106,9 @@
     "networkError": "Beim Überprüfen des Benutzers ist ein Netzwerkfehler aufgetreten.",
     "addRepoToSave": "Fügen Sie mindestens ein Repository hinzu, um ein Set zu speichern.",
     "copyLinkFailed": "Link konnte nicht kopiert werden."
+  },
+  "pwa": {
+    "installMessage": "Installieren Sie diese App für ein besseres Erlebnis.",
+    "installButton": "Installieren"
   }
 }
