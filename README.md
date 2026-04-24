@@ -74,61 +74,9 @@ By default, the GitHub API has a rate limit of 60 requests per hour for unauthen
 2.  Scroll down to the "API Authentication" section, paste your token into the input field, and click "Save".
 3.  The token is stored securely in your browser's `localStorage` and is only sent to the GitHub API.
 
-## 💻 Running Locally
+## 💻 Development
 
-To run this project on your local machine, follow these steps:
-
-1.  **Clone the repository:**
-
-    ```bash
-    git clone https://github.com/timmaurice/github-release-stats.git
-    cd github-release-stats
-    ```
-
-2.  **Install dependencies:**
-
-    ```bash
-    bun install
-    ```
-
-3.  **Run the development server:**
-
-    ```bash
-    bun dev
-    ```
-
-4.  Open your browser and navigate to the local URL provided by Vite (usually `http://localhost:5173`).
-
-### Other Scripts
-
-- **Build for production:**
-
-  ```bash
-  bun run build
-  ```
-
-- **Lint the code:**
-
-  ```bash
-  bun run lint
-  ```
-
-- **Run unit tests:**
-
-  ```bash
-  bun test
-  ```
-
-- **Run E2E tests:**
-
-  ```bash
-  bun run test:e2e
-  ```
-
-- **Format the code:**
-  ```bash
-  bun run format
-  ```
+Want to contribute or run the project locally? Check out our [Development Guide](./DEVELOPMENT.md) for instructions on setting up the repository, running tests, and understanding the architecture.
 
 ## ⚙️ Tech Stack
 
