@@ -2,7 +2,9 @@
   "app": {
     "title": "GitHub Release-Statistiken",
     "madeWith": "Erstellt mit <i class=\"bi bi-heart-fill text-danger\"></i> mittels Lit & Bootstrap.",
-    "language": "Sprache"
+    "language": "Sprache",
+    "githubLink": "GitHub",
+    "githubLinkTitle": "Quellcode anzeigen oder Issues auf GitHub öffnen"
   },
   "search": {
     "username": "Benutzername",

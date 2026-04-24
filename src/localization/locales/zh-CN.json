@@ -2,7 +2,9 @@
   "app": {
     "title": "GitHub 发行版统计",
     "madeWith": "使用 Lit & Bootstrap <i class=\"bi bi-heart-fill text-danger\"></i> 精心制作。",
-    "language": "语言"
+    "language": "语言",
+    "githubLink": "GitHub",
+    "githubLinkTitle": "在 GitHub 上查看源码或打开 Issues"
   },
   "search": {
     "username": "用户名",

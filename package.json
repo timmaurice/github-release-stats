@@ -21,7 +21,8 @@
     "test:e2e": "playwright test",
     "format": "npx prettier . --write",
     "preview": "vite preview",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src scripts --ext .ts,.mjs",
+    "screenshot": "node scripts/screenshot.mjs"
   },
   "dependencies": {
     "@fontsource/roboto": "^5.2.10",

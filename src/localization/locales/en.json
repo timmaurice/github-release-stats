@@ -2,7 +2,9 @@
   "app": {
     "title": "GitHub Release Stats",
     "madeWith": "Made with <i class=\"bi bi-heart-fill text-danger\"></i> using Lit & Bootstrap.",
-    "language": "Language"
+    "language": "Language",
+    "githubLink": "GitHub",
+    "githubLinkTitle": "View source or open issues on GitHub"
   },
   "search": {
     "username": "Username",

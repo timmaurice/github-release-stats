@@ -2,6 +2,8 @@
 
 A web application to visualize and compare download statistics, star history, open issues, and other key metrics for GitHub repositories.
 
+[![GitHub Release Stats Application Screenshot](./public/screenshot-desktop.png)](https://timmaurice.github.io/github-release-stats/)
+
 ## 🚀 Live Demo
 
 **[Check out the live application here!](https://timmaurice.github.io/github-release-stats/)**

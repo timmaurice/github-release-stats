@@ -30,6 +30,7 @@ export default [
     env: {
       browser: true,
       es2021: true,
+      node: true,
     },
     rules: {
       '@typescript-eslint/no-unused-vars': [

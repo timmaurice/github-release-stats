@@ -18,9 +18,20 @@ export class AppFooter extends LitElement {
         <div
           class="container d-flex justify-content-between align-items-center flex-wrap gap-2 py-3"
         >
-          <span class="text-muted"
-            >${unsafeHTML(this.localize.t('app.madeWith'))}</span
-          >
+          <div class="d-flex align-items-center flex-wrap gap-3">
+            <span class="text-muted"
+              >${unsafeHTML(this.localize.t('app.madeWith'))}</span
+            >
+            <a
+              href="https://github.com/timmaurice/github-release-stats"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-muted text-decoration-none d-flex align-items-center gap-1"
+              title=${this.localize.t('app.githubLinkTitle')}
+            >
+              <i class="bi bi-github"></i> ${this.localize.t('app.githubLink')}
+            </a>
+          </div>
           <slot></slot>
         </div>
       </footer>
