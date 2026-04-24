@@ -181,6 +181,15 @@ export class ChartDisplay extends LitElement {
   issuesData: Map<string, { created_at: string; closed_at: string | null }[]> =
     new Map()
 
+  @property({ attribute: false })
+  pullRequestsData: Map<
+    string,
+    { created_at: string; closed_at: string | null; author: string }[]
+  > = new Map()
+
+  @property({ type: Boolean })
+  filterDependabot: boolean = false
+
   @property({ type: Array })
   repoOrder: string[] = []
 
@@ -574,6 +583,86 @@ export class ChartDisplay extends LitElement {
     }
   }
 
+  private _getPullRequestChartConfig(): ChartConfiguration {
+    const datasets: ChartDataset<'line', Point[]>[] = []
+    let colorIndex = 0
+
+    const order =
+      this.repoOrder.length > 0
+        ? this.repoOrder
+        : Array.from(this.pullRequestsData.keys())
+
+    order.forEach((repoIdentifier) => {
+      const prs = this.pullRequestsData.get(repoIdentifier)
+      if (!prs || prs.length === 0) return
+
+      const eventsByTime = new Map<number, number>()
+      prs.forEach((pr) => {
+        if (this.filterDependabot && pr.author === 'dependabot[bot]') {
+          return // Skip dependabot PRs if filtering is enabled
+        }
+        const createdTime = new Date(pr.created_at).getTime()
+        eventsByTime.set(createdTime, (eventsByTime.get(createdTime) || 0) + 1)
+        if (pr.closed_at) {
+          const closedTime = new Date(pr.closed_at).getTime()
+          eventsByTime.set(closedTime, (eventsByTime.get(closedTime) || 0) - 1)
+        }
+      })
+
+      const sortedTimes = Array.from(eventsByTime.keys()).sort((a, b) => a - b)
+
+      let openPRs = 0
+      const data: Point[] = []
+      // Add a starting point for the chart at y=0 before the first event.
+      if (sortedTimes[0] !== undefined) {
+        data.push({ x: sortedTimes[0] - 1, y: 0 })
+      }
+
+      for (const time of sortedTimes) {
+        openPRs += eventsByTime.get(time) ?? 0
+        data.push({ x: time, y: openPRs })
+      }
+
+      datasets.push({
+        label: repoIdentifier,
+        data: data,
+        borderColor: chartColors[colorIndex % chartColors.length],
+        backgroundColor: chartColors[colorIndex % chartColors.length],
+        fill: false,
+        stepped: true,
+      })
+      colorIndex++
+    })
+
+    return {
+      type: 'line',
+      data: { datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: this._getAnimationOptions(),
+        scales: {
+          x: this._getXAxisConfig(this.localize.t('charts.date')),
+          y: {
+            type: this.yAxisScale,
+            title: {
+              display: true,
+              text: `${this.localize.t('summaryTable.openPullRequests') || 'Open PRs'} (${
+                this.yAxisScale === 'logarithmic'
+                  ? this.localize.t('charts.logarithmic')
+                  : this.localize.t('charts.linear')
+              })`,
+            },
+            beginAtZero: this.yAxisScale === 'linear',
+          },
+        },
+        plugins: {
+          ...this._getCommonPluginOptions(),
+        },
+      },
+    }
+  }
+
   private _getChartConfig(): ChartConfiguration {
     switch (this.metric) {
       case 'size':
@@ -582,6 +671,8 @@ export class ChartDisplay extends LitElement {
         return this._getStarChartConfig()
       case 'openIssues':
         return this._getIssueChartConfig()
+      case 'openPullRequests':
+        return this._getPullRequestChartConfig()
       default:
         return this._getLineChartConfig()
     }

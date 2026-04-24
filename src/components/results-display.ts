@@ -13,6 +13,7 @@ type GitHubRelease = BaseGitHubRelease & { name: string | null }
 export class ResultsDisplay extends LitElement {
   @property({ type: Array }) releases: GitHubRelease[] = []
   @property({ type: String }) error = ''
+  @property({ type: Boolean }) showTotalDownloads = true
   private localize = new LocalizeController(this)
 
   // Disable shadow DOM to inherit global styles.
@@ -62,9 +63,13 @@ export class ResultsDisplay extends LitElement {
               <th scope="col" class="text-center">
                 ${this.localize.t('releaseDetails.published')}
               </th>
-              <th scope="col" class="text-end">
-                ${this.localize.t('releaseDetails.totalDownloads')}
-              </th>
+              ${
+                this.showTotalDownloads
+                  ? html`<th scope="col" class="text-end">
+                      ${this.localize.t('releaseDetails.totalDownloads')}
+                    </th>`
+                  : ''
+              }
               </tr>
             </thead>
             <tbody>
@@ -84,14 +89,16 @@ export class ResultsDisplay extends LitElement {
                     <td class="text-center text-nowrap">
                       ${this._formatDate(release.published_at)}
                     </td>
-                    <td class="text-end">
-                      ${this._formatNumber(
-                        release.assets.reduce(
-                          (sum, asset) => sum + asset.download_count,
-                          0
-                        )
-                      )}
-                    </td>
+                    ${this.showTotalDownloads
+                      ? html`<td class="text-end">
+                          ${this._formatNumber(
+                            release.assets.reduce(
+                              (sum, asset) => sum + asset.download_count,
+                              0
+                            )
+                          )}
+                        </td>`
+                      : ''}
                   </tr>
                 `
               )}

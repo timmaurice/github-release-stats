@@ -32,6 +32,10 @@ export class PwaInstallToast extends LitElement {
     }
   }
 
+  private _handleDismissClick() {
+    this.dispatchEvent(new CustomEvent('dismiss-pwa'))
+  }
+
   render() {
     return html`
       <div
@@ -54,6 +58,7 @@ export class PwaInstallToast extends LitElement {
             class="btn-close btn-close-white me-2 m-auto"
             data-bs-dismiss="toast"
             aria-label="Close"
+            @click=${this._handleDismissClick}
           ></button>
         </div>
       </div>

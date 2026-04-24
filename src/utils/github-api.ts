@@ -145,3 +145,118 @@ export async function getIssues(octokit: Octokit, owner: string, repo: string) {
   await setCache(cacheKey, issues)
   return issues
 }
+
+/**
+ * Fetches all pull requests (open and closed) with timestamps for a repository using pagination.
+ */
+export async function getPullRequests(
+  octokit: Octokit,
+  owner: string,
+  repo: string
+) {
+  const cacheKey = `prs-${owner}-${repo}`
+  const cached =
+    await getCache<
+      { created_at: string; closed_at: string | null; author: string }[]
+    >(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
+  const prs: {
+    created_at: string
+    closed_at: string | null
+    author: string
+  }[] = []
+  const iterator = octokit.paginate.iterator(octokit.rest.pulls.list, {
+    owner,
+    repo,
+    per_page: 100,
+    state: 'all',
+  })
+
+  let pageCount = 0
+  const MAX_PR_PAGES = 10
+
+  for await (const { data: pageData } of iterator) {
+    prs.push(
+      ...pageData.map((pr) => ({
+        created_at: pr.created_at,
+        closed_at: pr.closed_at || null,
+        author: pr.user?.login || '',
+      }))
+    )
+    pageCount++
+    if (pageCount >= MAX_PR_PAGES) {
+      break
+    }
+  }
+
+  await setCache(cacheKey, prs)
+  return prs
+}
+
+/**
+ * Fetches the total count of open pull requests for a repository efficiently using pagination headers.
+ */
+export async function getOpenPullRequestsCount(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  filterDependabot: boolean = false
+): Promise<{ displayCount: number; totalCount: number }> {
+  const cacheKey = `open-prs-counts-${owner}-${repo}-${filterDependabot}`
+  const cached = await getCache<{ displayCount: number; totalCount: number }>(
+    cacheKey
+  )
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
+  let displayCount = 0
+  let totalCount = 0
+
+  if (filterDependabot) {
+    // When filtering dependabot, we must fetch the open PRs to inspect the author.
+    const iterator = octokit.paginate.iterator(octokit.rest.pulls.list, {
+      owner,
+      repo,
+      state: 'open',
+      per_page: 100,
+    })
+
+    for await (const { data: pageData } of iterator) {
+      const nonDependabotPRs = pageData.filter(
+        (pr) => pr.user?.login !== 'dependabot[bot]'
+      )
+      displayCount += nonDependabotPRs.length
+      totalCount += pageData.length
+    }
+  } else {
+    // If not filtering, we can use the highly-optimized headers method.
+    const { data, headers } = await octokit.rest.pulls.list({
+      owner,
+      repo,
+      state: 'open',
+      per_page: 1,
+    })
+
+    if (data.length === 0) {
+      totalCount = 0
+    } else if (!headers.link) {
+      totalCount = 1
+    } else {
+      const match = headers.link.match(/&page=(\d+)>; rel="last"/)
+      if (match && match[1]) {
+        totalCount = parseInt(match[1], 10)
+      } else {
+        totalCount = 1
+      }
+    }
+    displayCount = totalCount
+  }
+
+  const result = { displayCount, totalCount }
+  await setCache(cacheKey, result)
+  return result
+}

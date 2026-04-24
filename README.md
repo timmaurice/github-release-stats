@@ -19,6 +19,8 @@ A web application to visualize and compare download statistics, star history, op
   - **Open Issues History:** See the trend of open issues.
   - **Total Asset Size:** Monitor the size of release assets over time.
 - **Dynamic Chart Metric:** The chart automatically updates to visualize the metric you sort by in the summary table.
+- **Customizable Tables:** Toggle the "Total Downloads" column on or off to focus on the metrics you care about most.
+- **Filter Dependabot PRs:** Exclude automated Dependabot pull requests for a cleaner view of active contributions.
 - **Linear & Logarithmic Scales:** Switch the chart's Y-axis scale for better data analysis.
 - **Zoom & Pan:** Zoom in on specific time ranges within the charts.
 
@@ -39,7 +41,8 @@ A web application to visualize and compare download statistics, star history, op
 
 - **Drag & Drop Reordering:** Easily reorder repositories by dragging their pills.
 - **Responsive Design:** A clean and intuitive interface that works on both desktop and mobile.
-- **Light & Dark Mode:** Automatically detects system preference and allows manual toggling.
+- **Settings Modal:** A centralized hub to manage your preferences, including Language, Theme, API Authentication, and Table Options.
+- **Light, Dark, & Auto Modes:** Automatically detect your system preference with an "Auto" mode, or manually switch between Light and Dark themes.
 - **Internationalization (i18n):** Available in English, German, and Simplified Chinese.
 - **GitHub API Authentication:** Enter a Personal Access Token to increase the API rate limit from 60 to 5,000 requests/hour.
 
@@ -67,8 +70,8 @@ A web application to visualize and compare download statistics, star history, op
 
 By default, the GitHub API has a rate limit of 60 requests per hour for unauthenticated users. To increase this limit, you can provide a GitHub Personal Access Token.
 
-1.  Scroll to the bottom of the page and expand the "API Authentication" section.
-2.  Paste your token into the input field and click "Save".
+1.  Click the gear icon in the top-right toolbar to open the **Settings** modal.
+2.  Scroll down to the "API Authentication" section, paste your token into the input field, and click "Save".
 3.  The token is stored securely in your browser's `localStorage` and is only sent to the GitHub API.
 
 ## 💻 Running Locally

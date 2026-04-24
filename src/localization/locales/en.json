@@ -36,12 +36,13 @@
     "repository": "Repository",
     "stars": "Stars",
     "openIssues": "Open Issues",
+    "openPullRequests": "Open PRs",
     "latestVersion": "Latest Version",
     "lastUpdate": "Last Update",
     "size": "Size (KB)",
     "totalDownloads": "Total Downloads",
     "viewOnGitHub": "View on GitHub",
-    "exportReport": "Export Markdown Report"
+    "copyReport": "Copy Markdown Report"
   },
   "charts": {
     "releaseDate": "Release Date",
@@ -74,6 +75,13 @@
     "error": "Could not fetch rate limit."
   },
   "settings": {
+    "title": "Settings",
+    "general": "General",
+    "tableOptions": "Table Options",
+    "theme": "Theme",
+    "themeAuto": "Auto (System Default)",
+    "themeLight": "Light Mode",
+    "themeDark": "Dark Mode",
     "apiAuth": "API Authentication",
     "apiAuthDescription": "Provide a <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub Personal Access Token</a> to increase the API rate limit from 60 to 5,000 requests per hour. The token is stored only in your browser's local storage.",
     "status": "Status:",
@@ -81,7 +89,9 @@
     "anonymous": "Anonymous",
     "save": "Save",
     "clear": "Clear",
-    "toggleTheme": "Toggle theme"
+    "toggleTheme": "Toggle theme",
+    "filterDependabot": "Filter Dependabot PRs",
+    "showTotalDownloads": "Show Total Downloads"
   },
   "modals": {
     "saveSetTitle": "Save Comparison Set",

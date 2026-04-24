@@ -288,15 +288,37 @@ test.describe('GitHub Release Stats E2E', () => {
     const htmlNode = page.locator('html')
     const initialTheme = await htmlNode.getAttribute('data-bs-theme')
 
-    // Click theme toggle
-    const themeToggleBtn = page
-      .locator('button[aria-label="Toggle theme"]')
-      .or(page.locator('button[title*="theme" i]'))
-      .first()
-    await themeToggleBtn.click()
+    // Open settings modal
+    const settingsBtn = page.locator('button[data-bs-target="#settingsModal"]')
+    await settingsBtn.click()
+    const modal = page.locator('#settingsModal')
+    await expect(modal).toBeVisible()
 
-    const newTheme = await htmlNode.getAttribute('data-bs-theme')
-    expect(newTheme).not.toBe(initialTheme)
+    // Click theme dropdown
+    const themeDropdownBtn = page
+      .locator('#settingsModal button[data-bs-toggle="dropdown"]')
+      .nth(1) // Second dropdown is theme (first is language)
+    await themeDropdownBtn.click()
+
+    // Select Dark Mode
+    const darkModeOption = page.locator('#settingsModal .dropdown-menu a', {
+      hasText: 'Dark Mode',
+    })
+    await darkModeOption.click()
+
+    // Wait for the actual theme change
+    await expect(htmlNode).toHaveAttribute('data-bs-theme', 'dark')
+
+    // Click theme dropdown again
+    await themeDropdownBtn.click()
+
+    // Select Light Mode
+    const lightModeOption = page.locator('#settingsModal .dropdown-menu a', {
+      hasText: 'Light Mode',
+    })
+    await lightModeOption.click()
+
+    await expect(htmlNode).toHaveAttribute('data-bs-theme', 'light')
   })
 
   test('should change language and update placeholder', async ({ page }) => {
@@ -304,24 +326,98 @@ test.describe('GitHub Release Stats E2E', () => {
     const usernameInput = page.locator('#username-input').first()
     await expect(usernameInput).toHaveAttribute('placeholder', 'Username')
 
+    // Open settings modal
+    const settingsBtn = page.locator('button[data-bs-target="#settingsModal"]')
+    await settingsBtn.click()
+    const modal = page.locator('#settingsModal')
+    await expect(modal).toBeVisible()
+
     // Change language to German
     const langDropdownBtn = page
-      .locator('button[data-bs-toggle="dropdown"]')
-      .filter({ has: page.locator('i.bi-translate') })
+      .locator('#settingsModal button[data-bs-toggle="dropdown"]')
       .first()
     await langDropdownBtn.click()
 
-    const deOption = page.locator('.dropdown-menu a', { hasText: 'Deutsch' })
+    const deOption = page.locator('#settingsModal .dropdown-menu a', {
+      hasText: 'Deutsch',
+    })
     await deOption.click()
 
     // Verify placeholder changes
     await expect(usernameInput).toHaveAttribute('placeholder', 'Benutzername')
   })
 
+  test('should toggle Filter Dependabot PRs setting', async ({ page }) => {
+    // Open settings modal
+    const settingsBtn = page.locator('button[data-bs-target="#settingsModal"]')
+    await settingsBtn.click()
+
+    const modal = page.locator('#settingsModal')
+    await expect(modal).toBeVisible()
+
+    // Find the toggle
+    const dependabotToggle = page.locator('#filterDependabotSwitch')
+
+    // Default should be false (unchecked)
+    await expect(dependabotToggle).not.toBeChecked()
+
+    // Check it
+    await dependabotToggle.check()
+    await expect(dependabotToggle).toBeChecked()
+
+    // Uncheck it
+    await dependabotToggle.uncheck()
+    await expect(dependabotToggle).not.toBeChecked()
+  })
+
+  test('should toggle Show Total Downloads setting and update summary table', async ({
+    page,
+  }) => {
+    // Add a repo first to see the summary table
+    await page.locator('#username-input').first().fill('microsoft')
+    await page.locator('#repository-input').first().fill('vscode')
+    await page.locator('search-form button[type="submit"]').first().click()
+
+    // Verify the Total Downloads column exists
+    const totalDownloadsHeader = page.locator('summary-table th', {
+      hasText: 'Total Downloads',
+    })
+    await expect(totalDownloadsHeader).toBeVisible()
+
+    // Open settings modal
+    const settingsBtn = page.locator('button[data-bs-target="#settingsModal"]')
+    await settingsBtn.click()
+
+    const modal = page.locator('#settingsModal')
+    await expect(modal).toBeVisible()
+
+    // Find the toggle
+    const downloadsToggle = page.locator('#showTotalDownloadsSwitch')
+
+    // Default should be true (checked)
+    await expect(downloadsToggle).toBeChecked()
+
+    // Uncheck it
+    await downloadsToggle.uncheck()
+    await expect(downloadsToggle).not.toBeChecked()
+
+    // Close the modal to see the table
+    const closeBtn = page.locator('#settingsModal .btn-close')
+    await closeBtn.click()
+    await expect(modal).not.toBeVisible()
+
+    // Verify the Total Downloads column is hidden
+    await expect(totalDownloadsHeader).not.toBeVisible()
+  })
+
   test('should handle API authentication', async ({ page }) => {
-    // Open auth accordion
-    const authBtn = page.locator('button[data-bs-target="#authCollapse"]')
-    await authBtn.click()
+    // Open settings modal
+    const settingsBtn = page.locator('button[data-bs-target="#settingsModal"]')
+    await settingsBtn.click()
+
+    // Wait for modal to be visible
+    const modal = page.locator('#settingsModal')
+    await expect(modal).toBeVisible()
 
     // Enter token
     const tokenInput = page.locator('#token-input')
@@ -329,11 +425,11 @@ test.describe('GitHub Release Stats E2E', () => {
     await tokenInput.fill('ghp_dummytoken123')
 
     // Click Save
-    const saveBtn = page.locator('#authCollapse button[type="submit"]')
+    const saveBtn = page.locator('#settingsModal button[type="submit"]')
     await saveBtn.click()
 
     // Verify it shows as Authenticated
-    await expect(page.locator('#authCollapse .badge.bg-success')).toBeVisible()
+    await expect(page.locator('#settingsModal .badge.bg-success')).toBeVisible()
   })
 
   test('should save and load a repository set', async ({ page }) => {

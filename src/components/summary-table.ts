@@ -11,6 +11,7 @@ export interface RepoSummary {
   size: number // in KB
   totalDownloads: number
   openIssues: number
+  openPullRequests: number
 }
 
 export type SortKey = keyof Omit<RepoSummary, 'identifier'> | 'manual'
@@ -31,6 +32,9 @@ export class SummaryTable extends LitElement {
   @property({ type: String })
   sortDirection: 'asc' | 'desc' = 'desc'
 
+  @property({ type: Boolean })
+  showTotalDownloads = true
+
   // Disable shadow DOM to inherit global styles.
   protected createRenderRoot() {
     return this
@@ -40,9 +44,9 @@ export class SummaryTable extends LitElement {
     this.dispatchEvent(new CustomEvent('request-sort', { detail: key }))
   }
 
-  private _handleExportReport(identifier: string) {
+  private _handleCopyReport(identifier: string) {
     this.dispatchEvent(
-      new CustomEvent('export-repo-report', { detail: identifier })
+      new CustomEvent('copy-repo-report', { detail: identifier })
     )
   }
 
@@ -68,11 +72,15 @@ export class SummaryTable extends LitElement {
     const headerKeys: SortKey[] = [
       'stars',
       'openIssues',
+      'openPullRequests',
       'latestVersion',
       'lastUpdate',
       'size',
-      'totalDownloads',
     ]
+
+    if (this.showTotalDownloads) {
+      headerKeys.push('totalDownloads')
+    }
     const labels: Record<SortKey, string> = {
       stars: this.localize.t('summaryTable.stars'),
       latestVersion: this.localize.t('summaryTable.latestVersion'),
@@ -80,6 +88,8 @@ export class SummaryTable extends LitElement {
       size: this.localize.t('summaryTable.size'),
       totalDownloads: this.localize.t('summaryTable.totalDownloads'),
       openIssues: this.localize.t('summaryTable.openIssues'),
+      openPullRequests:
+        this.localize.t('summaryTable.openPullRequests') || 'Open PRs',
       manual: 'Manual',
     }
 
@@ -89,6 +99,7 @@ export class SummaryTable extends LitElement {
     // d-lg-table-cell shows on large screens and up.
     const responsiveClasses: Partial<Record<SortKey, string>> = {
       openIssues: 'd-none d-lg-table-cell',
+      openPullRequests: 'd-none d-xl-table-cell',
       latestVersion: 'd-none d-md-table-cell',
       lastUpdate: 'd-none d-md-table-cell',
       size: 'd-none d-lg-table-cell',
@@ -136,11 +147,11 @@ export class SummaryTable extends LitElement {
                       <div class="d-flex gap-1 flex-shrink-0">
                         <button
                           class="btn btn-sm btn-link py-0 px-1 text-decoration-none"
-                          title=${this.localize.t('summaryTable.exportReport')}
+                          title=${this.localize.t('summaryTable.copyReport')}
                           @click=${() =>
-                            this._handleExportReport(repo.identifier)}
+                            this._handleCopyReport(repo.identifier)}
                         >
-                          <i class="bi bi-file-earmark-arrow-down"></i>
+                          <i class="bi bi-markdown"></i>
                         </button>
                         <a
                           href="https://github.com/${repo.identifier}"
@@ -158,18 +169,23 @@ export class SummaryTable extends LitElement {
                   <td class="text-end ${responsiveClasses.openIssues}">
                     ${this._formatNumber(repo.openIssues)}
                   </td>
+                  <td class="text-end ${responsiveClasses.openPullRequests}">
+                    ${this._formatNumber(repo.openPullRequests)}
+                  </td>
                   <td class="text-end ${responsiveClasses.latestVersion}">
                     ${repo.latestVersion}
                   </td>
                   <td class="text-end ${responsiveClasses.lastUpdate}">
                     ${this._formatDate(repo.lastUpdate)}
                   </td>
-                  <td class="text-end ${responsiveClasses.size}">
+                  <td class="text-end ${responsiveClasses.size || ''}">
                     ${this._formatNumber(repo.size)}
                   </td>
-                  <td class="text-end">
-                    ${this._formatNumber(repo.totalDownloads)}
-                  </td>
+                  ${this.showTotalDownloads
+                    ? html`<td class="text-end">
+                        ${this._formatNumber(repo.totalDownloads)}
+                      </td>`
+                    : ''}
                 </tr>
               `
             )}

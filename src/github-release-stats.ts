@@ -23,13 +23,17 @@ import {
   getRepoDetails,
   getStargazers,
   getIssues,
+  getPullRequests,
+  getOpenPullRequestsCount,
 } from './utils/github-api'
+import { showToast } from './utils/toast'
 
 // Import sub-components
 import type { ChartDisplay } from './components/chart-display'
 import './components/app-footer'
 import './components/app-header'
 import './components/loading-spinner'
+import './components/settings-modal'
 import './components/results-display'
 import './components/rate-limit-display'
 import './components/summary-table'
@@ -45,28 +49,29 @@ import './components/index.scss'
 export class GithubReleaseStats extends LitElement {
   private localize = new LocalizeController(this)
 
-  // Instantiate Octokit for GitHub API requests
-  private octokit = new Octokit()
+  private octokit: Octokit
 
-  // Modals
-  private _saveSetModal: Modal | null = null
-  private _manageSetsModal: Modal | null = null
-  private _confirmModal: Modal | null = null
+  private _saveSetModal?: Modal
+  private _manageSetsModal?: Modal
+  private _confirmModal?: Modal
+  private _settingsModal?: Modal | null = null
   private _sortableInstance: Sortable | null = null
 
   private _storageKey = 'github-release-stats-sets'
 
-  // Form state for the next repo to be added
   @state() private _newUsername = ''
   @state() private _newRepository = ''
 
-  // Main state for the application
   @state() private _repos: { username: string; repository: string }[] = []
   @state() private _releasesData: Map<string, GitHubRelease[]> = new Map()
   @state() private _downloadsData: Map<string, number> = new Map()
   @state() private _stargazersData: Map<string, { starred_at: string }[]> =
     new Map()
   @state() private _issuesData: Map<
+    string,
+    { created_at: string; closed_at: string | null }[]
+  > = new Map()
+  @state() private _pullRequestsData: Map<
     string,
     { created_at: string; closed_at: string | null }[]
   > = new Map()
@@ -79,17 +84,18 @@ export class GithubReleaseStats extends LitElement {
   @state() private _error = ''
   @state() private _authError = ''
   @state() private _repoSuggestions: string[] = []
-  @state() private _theme: 'light' | 'dark' = 'light'
+  @state() private _themeSetting: 'light' | 'dark' | 'auto' = 'auto'
   @state() private _repoCountForConfirm = 0
   @state() private _userForConfirm = ''
   @state() private _githubToken = ''
   @state() private _yAxisScale: 'linear' | 'logarithmic' = 'linear'
   @state() private _suggestionsLoading = false
   @state() private _savedSets: Record<string, string[]> = {}
+  @state() private _filterDependabot = false
+  @state() private _showTotalDownloads = true
   @state() private _justUpdatedSet: string | null = null
 
   @state() private _installPrompt: BeforeInstallPromptEvent | null = null
-  // State for the generic confirmation modal
   @state() private _confirmModalTitle = ''
   @state() private _confirmModalBody = ''
   @state() private _confirmAction: (() => void) | null = null
@@ -112,6 +118,23 @@ export class GithubReleaseStats extends LitElement {
     const token = localStorage.getItem('github-token') || ''
     this._githubToken = token
     this.octokit = new Octokit({ auth: token || undefined })
+
+    const savedFilterDependabot = localStorage.getItem('filterDependabot')
+    if (savedFilterDependabot !== null) {
+      this._filterDependabot = savedFilterDependabot === 'true'
+    }
+
+    const savedShowTotalDownloads = localStorage.getItem('showTotalDownloads')
+    if (savedShowTotalDownloads !== null) {
+      this._showTotalDownloads = savedShowTotalDownloads === 'true'
+    }
+
+    // If downloads are hidden, don't use it as the default chart/sort metric
+    if (!this._showTotalDownloads && this._sortKey === 'totalDownloads') {
+      this._sortKey = 'size'
+      this._chartMetric = 'size'
+    }
+
     this._loadSetsFromStorage()
   }
 
@@ -144,11 +167,9 @@ export class GithubReleaseStats extends LitElement {
 
   updated(changedProperties: Map<string, unknown>) {
     if (changedProperties.has('_repos') && this._repos.length > 0) {
-      // Lazy load the chart component only when we have repositories to display
       import('./components/chart-display').catch(console.error)
     }
 
-    // Initialize Bootstrap modals
     const saveModalEl = this.querySelector('#saveSetModal')
     if (saveModalEl && !this._saveSetModal) {
       this._saveSetModal = new Modal(saveModalEl)
@@ -161,9 +182,11 @@ export class GithubReleaseStats extends LitElement {
     if (confirmModalEl && !this._confirmModal) {
       this._confirmModal = new Modal(confirmModalEl)
     }
+    const settingsModalEl = this.querySelector('#settingsModal')
+    if (settingsModalEl && !this._settingsModal) {
+      this._settingsModal = new Modal(settingsModalEl)
+    }
 
-    // Manually initialize Bootstrap components that rely on data attributes,
-    // as they may not initialize automatically when rendered inside a Lit component.
     this.querySelectorAll('[data-bs-toggle="dropdown"]').forEach((el) =>
       Dropdown.getOrCreateInstance(el)
     )
@@ -208,27 +231,58 @@ export class GithubReleaseStats extends LitElement {
   }
 
   private _initializeTheme() {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      this._theme = savedTheme
+    const savedTheme = localStorage.getItem('theme')
+    if (
+      savedTheme === 'light' ||
+      savedTheme === 'dark' ||
+      savedTheme === 'auto'
+    ) {
+      this._themeSetting = savedTheme
     } else {
-      this._theme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
+      this._themeSetting = 'auto'
+      if (savedTheme !== null) {
+        localStorage.removeItem('theme') // clear invalid values
+      }
     }
     this._applyTheme()
   }
+
+  private _applyTheme() {
+    let actualTheme = this._themeSetting
+    if (actualTheme === 'auto') {
+      actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    }
+    document.documentElement.setAttribute('data-bs-theme', actualTheme)
+  }
+
   private _handleBeforeInstallPrompt = (e: Event) => {
     // Prevent the mini-infobar from appearing on mobile
     e.preventDefault()
+
+    // Check if the user dismissed the prompt recently (e.g. within the last 7 days)
+    const dismissedAt = localStorage.getItem('pwa-dismissed')
+    if (dismissedAt) {
+      const dismissedTime = parseInt(dismissedAt, 10)
+      const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000
+      if (Date.now() - dismissedTime < SEVEN_DAYS) {
+        return // Do not show the prompt if dismissed recently
+      }
+    }
+
     // Stash the event so it can be triggered later.
     this._installPrompt = e as BeforeInstallPromptEvent
   }
 
-  private _handleSystemThemeChange = (e: MediaQueryListEvent) => {
-    // Only change if no theme is explicitly set in localStorage
-    if (!localStorage.getItem('theme')) {
-      this._theme = e.matches ? 'dark' : 'light'
+  private _handlePwaDismiss = () => {
+    this._installPrompt = null
+    localStorage.setItem('pwa-dismissed', Date.now().toString())
+  }
+
+  private _handleSystemThemeChange = () => {
+    // Re-apply theme if we are using "auto"
+    if (this._themeSetting === 'auto') {
       this._applyTheme()
     }
   }
@@ -345,7 +399,13 @@ export class GithubReleaseStats extends LitElement {
         username,
         repository
       )
-      return Promise.all([releasesPromise, repoDetailsPromise])
+      const prCountPromise = getOpenPullRequestsCount(
+        this.octokit,
+        username,
+        repository,
+        this._filterDependabot
+      )
+      return Promise.all([releasesPromise, repoDetailsPromise, prCountPromise])
     })
 
     try {
@@ -354,46 +414,63 @@ export class GithubReleaseStats extends LitElement {
       const newDownloadsData = new Map<string, number>()
       const newSummaryData: RepoSummary[] = []
 
-      results.forEach(([releasesResponse, repoDetailsResponse], index) => {
-        const repo = this._repos[index]
-        if (repo) {
-          const repoIdentifier = `${repo.username}/${repo.repository}`
-          const releases = releasesResponse.data.filter(
-            (r): r is typeof r & { published_at: string } => !!r.published_at
-          )
-          const repoDetails = repoDetailsResponse.data
+      results.forEach(
+        ([releasesResponse, repoDetailsResponse, prCounts], index) => {
+          const repo = this._repos[index]
+          if (repo) {
+            const repoIdentifier = `${repo.username}/${repo.repository}`
+            const releases = releasesResponse.data.filter(
+              (r): r is typeof r & { published_at: string } => !!r.published_at
+            )
+            const repoDetails = repoDetailsResponse.data
 
-          newReleasesData.set(repoIdentifier, releases)
+            newReleasesData.set(repoIdentifier, releases)
 
-          const totalDownloads = releases.reduce(
-            (total, release) =>
-              total +
-              release.assets.reduce(
-                (sum, asset) => sum + asset.download_count,
-                0
+            const totalDownloads = releases.reduce(
+              (total, release) =>
+                total +
+                release.assets.reduce(
+                  (sum, asset) => sum + asset.download_count,
+                  0
+                ),
+              0
+            )
+            newDownloadsData.set(repoIdentifier, totalDownloads)
+
+            newSummaryData.push({
+              identifier: repoIdentifier,
+              stars: repoDetails.stargazers_count,
+              latestVersion:
+                releases[0]?.tag_name || this.localize.t('common.notAvailable'),
+              lastUpdate: repoDetails.pushed_at,
+              size: repoDetails.size,
+              totalDownloads: totalDownloads,
+              openIssues: Math.max(
+                0,
+                repoDetails.open_issues_count - prCounts.totalCount
               ),
-            0
-          )
-          newDownloadsData.set(repoIdentifier, totalDownloads)
-
-          newSummaryData.push({
-            identifier: repoIdentifier,
-            stars: repoDetails.stargazers_count,
-            latestVersion:
-              releases[0]?.tag_name || this.localize.t('common.notAvailable'),
-            lastUpdate: repoDetails.pushed_at,
-            size: repoDetails.size,
-            totalDownloads: totalDownloads,
-            openIssues: repoDetails.open_issues_count,
-          })
+              openPullRequests: prCounts.displayCount,
+            })
+          }
         }
-      })
+      )
 
       this._releasesData = newReleasesData
       this._downloadsData = newDownloadsData
       this._repoSummaryData = newSummaryData
-      // Initialize the display order
-      this._repoOrder = this._repos.map((r) => `${r.username}/${r.repository}`)
+
+      if (this._sortKey !== 'manual') {
+        // Just trigger a sort without flipping direction
+        this._handleRequestSort(
+          new CustomEvent('request-sort', { detail: this._sortKey }),
+          true
+        )
+      } else {
+        // Initialize the display order based on manual order
+        this._repoOrder = this._repos.map(
+          (r) => `${r.username}/${r.repository}`
+        )
+      }
     } catch (error) {
       this._error = this.localize.t('errors.fetchRepoData')
       console.error(error)
@@ -509,7 +586,7 @@ export class GithubReleaseStats extends LitElement {
     this._updateURL()
   }
 
-  private async _handleExportReport(e: CustomEvent<string>) {
+  private async _handleCopyReport(e: CustomEvent<string>) {
     const identifier = e.detail
     const summary = this._repoSummaryData.find(
       (s) => s.identifier === identifier
@@ -545,8 +622,11 @@ export class GithubReleaseStats extends LitElement {
         issues
       )
 
-      const filename = `${username}-${repository}-report.md`
-      downloadFile(markdownContent, filename, 'text/markdown;charset=utf-8;')
+      await navigator.clipboard.writeText(markdownContent)
+      showToast(
+        this.localize.t('comparison.markdownCopied') ||
+          'Markdown copied to clipboard!'
+      )
     } catch (err) {
       console.error(err)
       this._error = this.localize.t('errors.fetchRepoData')
@@ -555,12 +635,17 @@ export class GithubReleaseStats extends LitElement {
     }
   }
 
-  private async _handleRequestSort(e: CustomEvent<SortKey>) {
+  private async _handleRequestSort(
+    e: CustomEvent<SortKey>,
+    retainDirection = false
+  ) {
     const newSortKey = e.detail
     this._authError = '' // Clear previous auth errors on any sort attempt
 
     if (
-      (newSortKey === 'stars' || newSortKey === 'openIssues') &&
+      (newSortKey === 'stars' ||
+        newSortKey === 'openIssues' ||
+        newSortKey === 'openPullRequests') &&
       !this._githubToken
     ) {
       this._authError = this.localize.t('errors.authRequired')
@@ -570,16 +655,18 @@ export class GithubReleaseStats extends LitElement {
     if (newSortKey === 'manual') {
       return
     }
-    let newSortDirection: 'asc' | 'desc'
+    let newSortDirection: 'asc' | 'desc' = this._sortDirection
 
-    if (this._sortKey === newSortKey) {
-      newSortDirection = this._sortDirection === 'asc' ? 'desc' : 'asc'
-    } else {
-      // Default to descending for numeric values, ascending for text
-      newSortDirection =
-        newSortKey === 'latestVersion' || newSortKey === 'lastUpdate'
-          ? 'asc'
-          : 'desc'
+    if (!retainDirection) {
+      if (this._sortKey === newSortKey) {
+        newSortDirection = this._sortDirection === 'asc' ? 'desc' : 'asc'
+      } else {
+        // Default to descending for numeric values, ascending for text
+        newSortDirection =
+          newSortKey === 'latestVersion' || newSortKey === 'lastUpdate'
+            ? 'asc'
+            : 'desc'
+      }
     }
 
     this._sortKey = newSortKey
@@ -587,11 +674,36 @@ export class GithubReleaseStats extends LitElement {
     this._chartMetric = newSortKey
 
     const sorted = [...this._repoSummaryData].sort((a, b) => {
-      const valA = a[newSortKey]
-      const valB = b[newSortKey]
       let comparison = 0
-      if (valA > valB) comparison = 1
-      else if (valA < valB) comparison = -1
+
+      if (newSortKey === 'latestVersion') {
+        const parse = (v: string) =>
+          v
+            .replace(/^v/i, '')
+            .split('.')
+            .map((n) => parseInt(n, 10) || 0)
+        const partsA = parse(a.latestVersion as string)
+        const partsB = parse(b.latestVersion as string)
+        const len = Math.max(partsA.length, partsB.length)
+
+        for (let i = 0; i < len; i++) {
+          const pA = partsA[i] || 0
+          const pB = partsB[i] || 0
+          if (pA > pB) {
+            comparison = 1
+            break
+          } else if (pA < pB) {
+            comparison = -1
+            break
+          }
+        }
+      } else {
+        const valA = a[newSortKey]
+        const valB = b[newSortKey]
+        if (valA > valB) comparison = 1
+        else if (valA < valB) comparison = -1
+      }
+
       return newSortDirection === 'asc' ? comparison : -comparison
     })
 
@@ -657,6 +769,38 @@ export class GithubReleaseStats extends LitElement {
         } catch (error) {
           console.error('Failed to fetch issue data on demand', error)
           this._error = this.localize.t('errors.fetchIssueHistory')
+        } finally {
+          this._loading = false
+        }
+      }
+    }
+
+    if (newSortKey === 'openPullRequests') {
+      const reposToFetch = this._repos.filter((repo) => {
+        const repoIdentifier = `${repo.username}/${repo.repository}`
+        return !this._pullRequestsData.has(repoIdentifier)
+      })
+
+      if (reposToFetch.length > 0) {
+        this._loading = true
+        try {
+          const prPromises = reposToFetch.map((repo) =>
+            getPullRequests(this.octokit, repo.username, repo.repository)
+          )
+          const results = await Promise.all(prPromises)
+
+          const newPullRequestsData = new Map(this._pullRequestsData)
+          results.forEach((prs, index) => {
+            const repo = reposToFetch[index]
+            if (repo) {
+              const repoIdentifier = `${repo.username}/${repo.repository}`
+              newPullRequestsData.set(repoIdentifier, prs)
+            }
+          })
+          this._pullRequestsData = newPullRequestsData
+        } catch (error) {
+          console.error('Failed to fetch PR data on demand', error)
+          this._error = this.localize.t('errors.fetchIssueHistory') // Fallback error string
         } finally {
           this._loading = false
         }
@@ -836,18 +980,9 @@ export class GithubReleaseStats extends LitElement {
   }
 
   private _handleCopyLink() {
-    const button = this.querySelector('#copy-link-button')
-    if (!button) return
-    const originalContent = button.innerHTML
-
     navigator.clipboard.writeText(window.location.href).then(
       () => {
-        button.innerHTML = `<i class="bi bi-check-lg me-sm-2"></i><span class="d-none d-sm-inline">${this.localize.t(
-          'comparison.copied'
-        )}</span>`
-        setTimeout(() => {
-          button.innerHTML = originalContent
-        }, 2000)
+        showToast(this.localize.t('comparison.copied'))
       },
       (err) => {
         console.error('Could not copy text to clipboard: ', err)
@@ -863,10 +998,6 @@ export class GithubReleaseStats extends LitElement {
       event_label: 'Copy Markdown',
       repo_count: this._repos.length,
     })
-
-    const button = this.querySelector('#copy-markdown-button')
-    if (!button) return
-    const originalContent = button.innerHTML
 
     const headers = [
       'Repository',
@@ -886,12 +1017,7 @@ export class GithubReleaseStats extends LitElement {
 
     navigator.clipboard.writeText(markdownContent).then(
       () => {
-        button.innerHTML = `<i class="bi bi-check-lg me-sm-2"></i><span class="d-none d-sm-inline">${this.localize.t(
-          'comparison.markdownCopied'
-        )}</span>`
-        setTimeout(() => {
-          button.innerHTML = originalContent
-        }, 2000)
+        showToast(this.localize.t('comparison.markdownCopied'))
       },
       (err) => {
         console.error('Could not copy text to clipboard: ', err)
@@ -935,34 +1061,6 @@ export class GithubReleaseStats extends LitElement {
     }
   }
 
-  private _handleSaveTokenFormSubmit(e: Event) {
-    e.preventDefault()
-    this._handleSaveToken()
-  }
-
-  private _handleSaveToken() {
-    const input = this.querySelector('#token-input') as HTMLInputElement
-    if (input) {
-      this._updateAuthToken(input.value.trim())
-    }
-  }
-
-  private _handleClearToken() {
-    const input = this.querySelector('#token-input') as HTMLInputElement
-    if (input) input.value = '' // Clear input immediately for better UX
-    this._updateAuthToken('')
-  }
-
-  private _toggleTheme() {
-    this._theme = this._theme === 'light' ? 'dark' : 'light'
-    localStorage.setItem('theme', this._theme)
-    trackEvent('change_theme', {
-      event_category: 'ui_interaction',
-      event_label: this._theme,
-    })
-    this._applyTheme()
-  }
-
   private async _handlePwaInstall() {
     if (this._installPrompt) {
       await this._installPrompt.prompt()
@@ -989,10 +1087,6 @@ export class GithubReleaseStats extends LitElement {
     this._confirmModalBody = body
     this._confirmAction = onConfirm
     this._confirmModal?.show()
-  }
-
-  private _applyTheme() {
-    document.documentElement.setAttribute('data-bs-theme', this._theme)
   }
 
   // Disable shadow DOM to allow global bootstrap styles to apply.
@@ -1025,72 +1119,6 @@ export class GithubReleaseStats extends LitElement {
             </div>
           `
         : ''
-
-    const authSettingsTemplate = html`
-      <div class="accordion mt-5" id="settingsAccordion">
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="authHeading">
-            <button
-              class="accordion-button collapsed"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#authCollapse"
-              aria-expanded="false"
-              aria-controls="authCollapse"
-            >
-              <i class="bi bi-key-fill me-2"></i> ${this.localize.t(
-                'settings.apiAuth'
-              )}
-            </button>
-          </h2>
-          <div
-            id="authCollapse"
-            class="accordion-collapse collapse"
-            aria-labelledby="authHeading"
-          >
-            <div class="accordion-body">
-              <p class="text-muted small">
-                ${unsafeHTML(this.localize.t('settings.apiAuthDescription'))}
-              </p>
-              <div class="mb-3">
-                <strong>${this.localize.t('settings.status')}</strong>
-                ${this._githubToken
-                  ? html`<span class="badge bg-success ms-2"
-                      ><i class="bi bi-check-circle-fill me-1"></i>
-                      ${this.localize.t('settings.authenticated')}</span
-                    >`
-                  : html`<span class="badge bg-secondary ms-2"
-                      ><i class="bi bi-x-circle-fill me-1"></i>
-                      ${this.localize.t('settings.anonymous')}</span
-                    >`}
-              </div>
-              <form @submit=${this._handleSaveTokenFormSubmit}>
-                <div class="input-group">
-                  <input
-                    id="token-input"
-                    type="password"
-                    class="form-control"
-                    placeholder="ghp_..."
-                    autocomplete="new-password"
-                    .value=${this._githubToken}
-                  />
-                  <button type="submit" class="btn btn-primary">
-                    ${this.localize.t('settings.save')}
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-outline-secondary"
-                    @click=${this._handleClearToken}
-                  >
-                    ${this.localize.t('settings.clear')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    `
 
     const modalsTemplate = html`
       <!-- Save Set Modal -->
@@ -1552,64 +1580,73 @@ export class GithubReleaseStats extends LitElement {
                   .repoOrder=${this._repoOrder}
                   .sortKey=${this._sortKey}
                   .sortDirection=${this._sortDirection}
+                  .showTotalDownloads=${this._showTotalDownloads}
                   @request-sort=${this._handleRequestSort}
-                  @export-repo-report=${this._handleExportReport}
+                  @copy-repo-report=${this._handleCopyReport}
                 ></summary-table>
 
                 <div
-                  class="d-flex justify-content-end mb-2"
-                  role="group"
-                  aria-label="Y-axis scale toggle"
+                  class="d-flex justify-content-end align-items-center mb-2 flex-wrap gap-2"
                 >
-                  <div class="btn-group btn-group-sm">
-                    <input
-                      type="radio"
-                      class="btn-check"
-                      name="scale-toggle"
-                      id="scale-log"
-                      autocomplete="off"
-                      .checked=${this._yAxisScale === 'logarithmic'}
-                      @change=${() => this._handleScaleChange('logarithmic')}
-                    />
-                    <label class="btn btn-outline-secondary" for="scale-log"
-                      ><i class="bi bi-graph-up me-2"></i>${this.localize.t(
-                        'charts.logarithmic'
-                      )}</label
-                    >
-
-                    <input
-                      type="radio"
-                      class="btn-check"
-                      name="scale-toggle"
-                      id="scale-linear"
-                      autocomplete="off"
-                      .checked=${this._yAxisScale === 'linear'}
-                      @change=${() => this._handleScaleChange('linear')}
-                    />
-                    <label class="btn btn-outline-secondary" for="scale-linear"
-                      ><i class="bi bi-bar-chart-steps me-2"></i
-                      >${this.localize.t('charts.linear')}</label
-                    >
-                  </div>
-                  <button
-                    class="btn btn-sm btn-outline-secondary ms-2"
-                    @click=${this._handleResetZoom}
-                    title=${this.localize.t('charts.resetZoom')}
+                  <div
+                    class="d-flex justify-content-end"
+                    role="group"
+                    aria-label="Y-axis scale toggle"
                   >
-                    <i class="bi bi-arrow-counterclockwise me-sm-2"></i
-                    ><span class="d-none d-sm-inline"
-                      >${this.localize.t('charts.resetZoom')}</span
+                    <div class="btn-group btn-group-sm">
+                      <input
+                        type="radio"
+                        class="btn-check"
+                        name="scale-toggle"
+                        id="scale-log"
+                        autocomplete="off"
+                        .checked=${this._yAxisScale === 'logarithmic'}
+                        @change=${() => this._handleScaleChange('logarithmic')}
+                      />
+                      <label class="btn btn-outline-secondary" for="scale-log"
+                        ><i class="bi bi-graph-up me-2"></i>${this.localize.t(
+                          'charts.logarithmic'
+                        )}</label
+                      >
+
+                      <input
+                        type="radio"
+                        class="btn-check"
+                        name="scale-toggle"
+                        id="scale-linear"
+                        autocomplete="off"
+                        .checked=${this._yAxisScale === 'linear'}
+                        @change=${() => this._handleScaleChange('linear')}
+                      />
+                      <label
+                        class="btn btn-outline-secondary"
+                        for="scale-linear"
+                        ><i class="bi bi-bar-chart-steps me-2"></i
+                        >${this.localize.t('charts.linear')}</label
+                      >
+                    </div>
+                    <button
+                      class="btn btn-sm btn-outline-secondary ms-2"
+                      @click=${this._handleResetZoom}
+                      title=${this.localize.t('charts.resetZoom')}
                     >
-                  </button>
+                      <i class="bi bi-arrow-counterclockwise me-sm-2"></i
+                      ><span class="d-none d-sm-inline"
+                        >${this.localize.t('charts.resetZoom')}</span
+                      >
+                    </button>
+                  </div>
                 </div>
 
                 <chart-display
                   .releasesData=${this._releasesData}
                   .stargazersData=${this._stargazersData}
                   .issuesData=${this._issuesData}
+                  .pullRequestsData=${this._pullRequestsData}
                   .repoOrder=${this._repoOrder}
                   .metric=${this._chartMetric}
                   .yAxisScale=${this._yAxisScale}
+                  .filterDependabot=${this._filterDependabot}
                   .limitZoomOut=${true}
                 ></chart-display>
 
@@ -1645,17 +1682,22 @@ export class GithubReleaseStats extends LitElement {
                                 ><i class="bi bi-github me-2 flex-shrink-0"></i>
                                 ${repoIdentifier}</strong
                               >
-                              <span
-                                class="d-none d-md-block text-muted text-nowrap flex-shrink-0"
-                                >${this.localize.t(
-                                  'releaseDetails.totalDownloads'
-                                )}
-                                <span class="badge bg-primary rounded-pill ms-2"
-                                  >${new Intl.NumberFormat(getLocale()).format(
-                                    totalDownloads
-                                  )}</span
-                                ></span
-                              >
+                              ${this._showTotalDownloads
+                                ? html`
+                                    <span
+                                      class="d-none d-md-block text-muted text-nowrap flex-shrink-0"
+                                      >${this.localize.t(
+                                        'releaseDetails.totalDownloads'
+                                      )}
+                                      <span
+                                        class="badge bg-primary rounded-pill ms-2"
+                                        >${new Intl.NumberFormat(
+                                          getLocale()
+                                        ).format(totalDownloads)}</span
+                                      ></span
+                                    >
+                                  `
+                                : ''}
                             </div>
                           </button>
                         </h2>
@@ -1667,6 +1709,7 @@ export class GithubReleaseStats extends LitElement {
                           <div class="accordion-body p-2">
                             <results-display
                               .releases=${releases}
+                              .showTotalDownloads=${this._showTotalDownloads}
                             ></results-display>
                           </div>
                         </div>
@@ -1675,7 +1718,50 @@ export class GithubReleaseStats extends LitElement {
                   })}
                 </div>
               `}
-          ${authSettingsTemplate} ${modalsTemplate} ${confirmationModalTemplate}
+          ${modalsTemplate} ${confirmationModalTemplate}
+          <settings-modal
+            .filterDependabot=${this._filterDependabot}
+            .showTotalDownloads=${this._showTotalDownloads}
+            .githubToken=${this._githubToken}
+            .theme=${this._themeSetting}
+            @filter-dependabot-change=${(e: CustomEvent<boolean>) => {
+              this._filterDependabot = e.detail
+              localStorage.setItem('filterDependabot', String(e.detail))
+              this._fetchDataForRepos()
+            }}
+            @show-total-downloads-change=${(e: CustomEvent<boolean>) => {
+              this._showTotalDownloads = e.detail
+              localStorage.setItem('showTotalDownloads', String(e.detail))
+              if (
+                !this._showTotalDownloads &&
+                this._sortKey === 'totalDownloads'
+              ) {
+                this._sortKey = 'size'
+                this._chartMetric = 'size'
+              } else if (this._showTotalDownloads) {
+                this._sortKey = 'totalDownloads'
+                this._chartMetric = 'totalDownloads'
+              }
+            }}
+            @language-change=${(e: CustomEvent<string>) =>
+              this._handleLanguageChange(e, e.detail)}
+            @theme-change=${(e: CustomEvent<string>) => {
+              const newTheme = e.detail as 'light' | 'dark' | 'auto'
+              if (
+                newTheme === 'light' ||
+                newTheme === 'dark' ||
+                newTheme === 'auto'
+              ) {
+                this._themeSetting = newTheme
+                localStorage.setItem('theme', newTheme)
+                this._applyTheme()
+              }
+            }}
+            @save-token=${(e: CustomEvent<string>) => {
+              this._updateAuthToken(e.detail)
+            }}
+            @clear-token=${() => this._updateAuthToken('')}
+          ></settings-modal>
         </div>
       </main>
 
@@ -1687,54 +1773,14 @@ export class GithubReleaseStats extends LitElement {
         class="position-fixed top-0 p-2 d-flex gap-2"
         style="z-index: 1030; left: calc(env(titlebar-area-x, 0px) + env(titlebar-area-width, 100%)); transform: translateX(-100%);"
       >
-        <div class="dropdown">
-          <button
-            class="btn btn-outline-secondary rounded-circle"
-            type="button"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            title="${this.localize.t('app.language')}"
-          >
-            <i class="bi bi-translate"></i>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li>
-              <a
-                class="dropdown-item ${getLocale() === 'en' ? 'active' : ''}"
-                href="#"
-                @click=${(e: Event) => this._handleLanguageChange(e, 'en')}
-                >English</a
-              >
-            </li>
-            <li>
-              <a
-                class="dropdown-item ${getLocale() === 'de' ? 'active' : ''}"
-                href="#"
-                @click=${(e: Event) => this._handleLanguageChange(e, 'de')}
-                >Deutsch</a
-              >
-            </li>
-            <li>
-              <a
-                class="dropdown-item ${getLocale() === 'zh-CN' ? 'active' : ''}"
-                href="#"
-                @click=${(e: Event) => this._handleLanguageChange(e, 'zh-CN')}
-                >简体中文</a
-              >
-            </li>
-          </ul>
-        </div>
         <button
-          @click=${this._toggleTheme}
           class="btn btn-outline-secondary rounded-circle"
-          aria-label=${this.localize.t('settings.toggleTheme')}
-          title=${this.localize.t('settings.toggleTheme')}
+          data-bs-toggle="modal"
+          data-bs-target="#settingsModal"
+          aria-label=${this.localize.t('settings.title') || 'Settings'}
+          title=${this.localize.t('settings.title') || 'Settings'}
         >
-          <i
-            class="bi ${this._theme === 'light'
-              ? 'bi-moon-stars-fill'
-              : 'bi-sun-fill'}"
-          ></i>
+          <i class="bi bi-gear-fill"></i>
         </button>
       </div>
 
@@ -1744,6 +1790,7 @@ export class GithubReleaseStats extends LitElement {
               <pwa-install-toast
                 .installPrompt=${this._installPrompt}
                 @install-pwa=${this._handlePwaInstall}
+                @dismiss-pwa=${this._handlePwaDismiss}
               ></pwa-install-toast>
             </div>
           `

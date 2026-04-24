@@ -36,12 +36,13 @@
     "repository": "仓库",
     "stars": "星标",
     "openIssues": "未解决的 Issues",
+    "openPullRequests": "未合并的 PR",
     "latestVersion": "最新版本",
     "lastUpdate": "最后更新",
     "size": "大小 (KB)",
     "totalDownloads": "总下载量",
     "viewOnGitHub": "在 GitHub 上查看",
-    "exportReport": "导出 Markdown 报告"
+    "copyReport": "复制 Markdown 报告"
   },
   "charts": {
     "releaseDate": "发布日期",
@@ -74,14 +75,23 @@
     "error": "无法获取速率限制。"
   },
   "settings": {
-    "apiAuth": "API 认证",
+    "title": "设置",
+    "general": "常规",
+    "tableOptions": "表格选项",
+    "theme": "主题",
+    "themeAuto": "自动 (跟随系统)",
+    "themeLight": "浅色模式",
+    "themeDark": "深色模式",
+    "apiAuth": "API 身份验证",
     "apiAuthDescription": "提供一个 <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub 个人访问令牌</a> 可将 API 速率限制从每小时 60 次请求提高到 5,000 次。该令牌仅存储在您浏览器的本地存储中。",
     "status": "状态：",
     "authenticated": "已认证",
     "anonymous": "匿名",
     "save": "保存",
     "clear": "清除",
-    "toggleTheme": "切换主题"
+    "toggleTheme": "切换主题",
+    "filterDependabot": "过滤 Dependabot PR",
+    "showTotalDownloads": "显示总下载量"
   },
   "modals": {
     "saveSetTitle": "保存比较集合",

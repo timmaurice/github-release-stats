@@ -36,12 +36,13 @@
     "repository": "Repository",
     "stars": "Sterne",
     "openIssues": "Offene Issues",
+    "openPullRequests": "Offene PRs",
     "latestVersion": "Neueste Version",
     "lastUpdate": "Letztes Update",
     "size": "Größe (KB)",
     "totalDownloads": "Downloads gesamt",
     "viewOnGitHub": "Auf GitHub ansehen",
-    "exportReport": "Markdown-Bericht exportieren"
+    "copyReport": "Markdown-Bericht kopieren"
   },
   "charts": {
     "releaseDate": "Veröffentlichungsdatum",
@@ -74,6 +75,13 @@
     "error": "Rate-Limit konnte nicht abgerufen werden."
   },
   "settings": {
+    "title": "Einstellungen",
+    "general": "Allgemein",
+    "tableOptions": "Tabellenoptionen",
+    "theme": "Design",
+    "themeAuto": "Auto (Systemstandard)",
+    "themeLight": "Heller Modus",
+    "themeDark": "Dunkler Modus",
     "apiAuth": "API-Authentifizierung",
     "apiAuthDescription": "Stellen Sie ein <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">persönliches GitHub-Zugriffstoken</a> bereit, um das API-Ratenlimit von 60 auf 5.000 Anfragen pro Stunde zu erhöhen. Das Token wird nur im Sitzungsspeicher Ihres Browsers gespeichert.",
     "status": "Status:",
@@ -81,7 +89,9 @@
     "anonymous": "Anonym",
     "save": "Speichern",
     "clear": "Löschen",
-    "toggleTheme": "Theme umschalten"
+    "toggleTheme": "Theme umschalten",
+    "filterDependabot": "Dependabot PRs herausfiltern",
+    "showTotalDownloads": "Downloads gesamt anzeigen"
   },
   "modals": {
     "saveSetTitle": "Vergleichs-Set speichern",
