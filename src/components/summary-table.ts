@@ -121,12 +121,19 @@ export class SummaryTable extends LitElement {
             ${orderedData.map(
               (repo) => html`
                 <tr>
-                  <td class="fw-bold">
+                  <td class="fw-bold" style="max-width: 40vw;">
                     <div
-                      class="d-flex justify-content-between align-items-center"
+                      class="d-flex justify-content-between align-items-center gap-2"
                     >
-                      <span>${repo.identifier}</span>
-                      <div class="d-flex gap-1">
+                      <span class="text-truncate" title=${repo.identifier}>
+                        ${repo.identifier.includes('/')
+                          ? html`<span
+                                class="d-none d-sm-inline fw-normal text-muted"
+                                >${repo.identifier.split('/')[0]}/</span
+                              ><span>${repo.identifier.split('/')[1]}</span>`
+                          : repo.identifier}
+                      </span>
+                      <div class="d-flex gap-1 flex-shrink-0">
                         <button
                           class="btn btn-sm btn-link py-0 px-1 text-decoration-none"
                           title=${this.localize.t('summaryTable.exportReport')}

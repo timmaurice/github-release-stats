@@ -49,7 +49,7 @@ const lastValueLinePlugin = {
       if (!lastElement) {
         return
       }
-      const { x: lastX, y: lastY } = lastElement.getProps(['x', 'y'], true)
+      const { x: lastX, y: lastY } = lastElement.getProps(['x', 'y'])
 
       // Don't draw if the last point is after 'now' or off-screen to the left
       if (lastX > nowX || lastX < xScale.left) {

@@ -1,6 +1,7 @@
 import { LitElement, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
+import { repeat } from 'lit/directives/repeat.js'
 import { trackEvent, trackPageView } from './analytics'
 import type { GitHubRelease, BeforeInstallPromptEvent } from './types'
 import { Octokit } from '@octokit/rest'
@@ -39,6 +40,7 @@ import './components/pwa-install-toast'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import '@fontsource/roboto/index.css'
+import './components/index.scss'
 @customElement('github-release-stats')
 export class GithubReleaseStats extends LitElement {
   private localize = new LocalizeController(this)
@@ -91,6 +93,18 @@ export class GithubReleaseStats extends LitElement {
   @state() private _confirmModalTitle = ''
   @state() private _confirmModalBody = ''
   @state() private _confirmAction: (() => void) | null = null
+
+  private get _filteredSuggestions() {
+    const currentUsername = this._newUsername.toLowerCase()
+    const addedReposForUser = new Set(
+      this._repos
+        .filter((r) => r.username.toLowerCase() === currentUsername)
+        .map((r) => r.repository.toLowerCase())
+    )
+    return this._repoSuggestions.filter(
+      (suggestion) => !addedReposForUser.has(suggestion.toLowerCase())
+    )
+  }
 
   constructor() {
     super()
@@ -166,11 +180,24 @@ export class GithubReleaseStats extends LitElement {
     if (pillsContainer && !this._sortableInstance) {
       this._sortableInstance = new Sortable(pillsContainer as HTMLElement, {
         animation: 150,
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        fallbackClass: 'sortable-fallback',
+        forceFallback: true, // Forces custom drag image to allow rotation
+        fallbackOnBody: true, // Appends the dragged clone to body so it isn't clipped by hidden overflows
         onEnd: (evt) => {
-          const newOrder = Array.from(evt.target.children).map(
-            (item) => (item as HTMLElement).dataset.identifier!
-          )
-          this._setNewOrder(newOrder)
+          if (
+            evt.oldIndex !== undefined &&
+            evt.newIndex !== undefined &&
+            evt.oldIndex !== evt.newIndex
+          ) {
+            // Read the final order directly from the DOM as determined by SortableJS
+            const newOrder = Array.from(evt.target.children)
+              .map((item) => (item as HTMLElement).dataset.identifier)
+              .filter(Boolean) as string[]
+
+            this._setNewOrder(newOrder)
+          }
         },
       })
     } else if (!pillsContainer && this._sortableInstance) {
@@ -382,9 +409,6 @@ export class GithubReleaseStats extends LitElement {
 
   private _handleRepoInput(e: CustomEvent) {
     this._newRepository = e.detail
-    if (this._repoSuggestions.includes(this._newRepository)) {
-      this._handleFormSubmit()
-    }
   }
 
   private async _handleUsernameChange() {
@@ -1268,7 +1292,7 @@ export class GithubReleaseStats extends LitElement {
                         <search-form
                           .username=${this._newUsername}
                           .repository=${this._newRepository}
-                          .suggestions=${this._repoSuggestions}
+                          .suggestions=${this._filteredSuggestions}
                           .suggestionsLoading=${this._suggestionsLoading}
                           buttonText=${this.localize.t('search.getStats')}
                           @username-input=${this._handleUsernameInput}
@@ -1324,28 +1348,35 @@ export class GithubReleaseStats extends LitElement {
                       id="repo-pills-container"
                       class="d-flex flex-wrap gap-2"
                     >
-                      ${this._repoOrder.map((identifier) => {
-                        const repo = this._repos.find(
-                          (r) => `${r.username}/${r.repository}` === identifier
-                        )
-                        if (!repo) return ''
-                        return html`
-                          <span
-                            class="badge d-flex align-items-center p-2 text-bg-secondary"
-                            data-identifier=${identifier}
-                            style="cursor: move;"
-                          >
-                            <i class="bi bi-github me-2"></i>
-                            ${identifier}
-                            <button
-                              type="button"
-                              class="btn-close btn-close-white ms-2"
-                              aria-label="Remove ${identifier}"
-                              @click=${() => this._handleRemoveRepo(repo)}
-                            ></button>
-                          </span>
-                        `
-                      })}
+                      ${repeat(
+                        this._repoOrder,
+                        (identifier) => identifier,
+                        (identifier) => {
+                          const repo = this._repos.find(
+                            (r) =>
+                              `${r.username}/${r.repository}` === identifier
+                          )
+                          if (!repo) return ''
+                          return html`
+                            <span
+                              class="badge d-flex align-items-center p-2 text-bg-secondary mw-100"
+                              data-identifier=${identifier}
+                              style="cursor: move;"
+                            >
+                              <i class="bi bi-github me-2 flex-shrink-0"></i>
+                              <span class="text-truncate" title=${identifier}
+                                >${identifier}</span
+                              >
+                              <button
+                                type="button"
+                                class="btn-close btn-close-white ms-2 flex-shrink-0"
+                                aria-label="Remove ${identifier}"
+                                @click=${() => this._handleRemoveRepo(repo)}
+                              ></button>
+                            </span>
+                          `
+                        }
+                      )}
                     </div>
                   </div>
                   <div
@@ -1359,8 +1390,8 @@ export class GithubReleaseStats extends LitElement {
                         data-bs-toggle="dropdown"
                         aria-expanded="false"
                       >
-                        <i class="bi bi-bookmark-star me-sm-2"></i
-                        ><span class="d-none d-sm-inline"
+                        <i class="bi bi-bookmark-star me-lg-2"></i
+                        ><span class="d-none d-lg-inline"
                           >${this.localize.t('comparison.sets')}</span
                         >
                       </button>
@@ -1409,51 +1440,64 @@ export class GithubReleaseStats extends LitElement {
                     <button
                       id="copy-link-button"
                       class="btn btn-outline-secondary"
+                      aria-label=${this.localize.t('comparison.copyLink')}
+                      title=${this.localize.t('comparison.copyLink')}
                       @click=${this._handleCopyLink}
                     >
-                      <i class="bi bi-clipboard me-sm-2"></i
-                      ><span class="d-none d-sm-inline"
+                      <i class="bi bi-clipboard me-lg-2" aria-hidden="true"></i
+                      ><span class="d-none d-lg-inline" aria-hidden="true"
                         >${this.localize.t('comparison.copyLink')}</span
                       >
                     </button>
                     <button
                       class="btn btn-outline-secondary"
+                      aria-label=${this.localize.t('comparison.exportCsv')}
+                      title=${this.localize.t('comparison.exportCsv')}
                       @click=${this._handleExportCsv}
                     >
-                      <i class="bi bi-download me-sm-2"></i
-                      ><span class="d-none d-sm-inline"
+                      <i class="bi bi-download me-lg-2" aria-hidden="true"></i
+                      ><span class="d-none d-lg-inline" aria-hidden="true"
                         >${this.localize.t('comparison.exportCsv')}</span
                       >
                     </button>
                     <button
                       id="copy-markdown-button"
                       class="btn btn-outline-secondary"
+                      aria-label=${this.localize.t('comparison.copyMarkdown')}
+                      title=${this.localize.t('comparison.copyMarkdown')}
                       @click=${this._handleCopyMarkdown}
                     >
-                      <i class="bi bi-markdown me-sm-2"></i
-                      ><span class="d-none d-sm-inline"
+                      <i class="bi bi-markdown me-lg-2" aria-hidden="true"></i
+                      ><span class="d-none d-lg-inline" aria-hidden="true"
                         >${this.localize.t('comparison.copyMarkdown')}</span
                       >
                     </button>
                     <button
                       id="pin-dashboard-button"
                       class="btn btn-outline-secondary"
-                      @click=${this._handlePinDashboard}
+                      aria-label=${this.localize.t(
+                        localStorage.getItem('default-dashboard') ===
+                          JSON.stringify(this._repoOrder)
+                          ? 'comparison.unpinDashboard'
+                          : 'comparison.pinDashboard'
+                      )}
                       title=${this.localize.t(
                         localStorage.getItem('default-dashboard') ===
                           JSON.stringify(this._repoOrder)
                           ? 'comparison.unpinDashboard'
                           : 'comparison.pinDashboard'
                       )}
+                      @click=${this._handlePinDashboard}
                     >
                       <i
                         class="bi ${localStorage.getItem(
                           'default-dashboard'
                         ) === JSON.stringify(this._repoOrder)
                           ? 'bi-pin-fill'
-                          : 'bi-pin-angle'} me-sm-2"
+                          : 'bi-pin-angle'} me-lg-2"
+                        aria-hidden="true"
                       ></i
-                      ><span class="d-none d-sm-inline"
+                      ><span class="d-none d-lg-inline" aria-hidden="true"
                         >${this.localize.t(
                           localStorage.getItem('default-dashboard') ===
                             JSON.stringify(this._repoOrder)
@@ -1464,10 +1508,12 @@ export class GithubReleaseStats extends LitElement {
                     </button>
                     <button
                       class="btn btn-outline-danger"
+                      aria-label=${this.localize.t('comparison.clearAll')}
+                      title=${this.localize.t('comparison.clearAll')}
                       @click=${this._handleClearAllRepos}
                     >
-                      <i class="bi bi-trash me-sm-2"></i
-                      ><span class="d-none d-sm-inline"
+                      <i class="bi bi-trash me-lg-2" aria-hidden="true"></i
+                      ><span class="d-none d-lg-inline" aria-hidden="true"
                         >${this.localize.t('comparison.clearAll')}</span
                       >
                     </button>
@@ -1479,7 +1525,7 @@ export class GithubReleaseStats extends LitElement {
                     <search-form
                       .username=${this._newUsername}
                       .repository=${this._newRepository}
-                      .suggestions=${this._repoSuggestions}
+                      .suggestions=${this._filteredSuggestions}
                       .suggestionsLoading=${this._suggestionsLoading}
                       buttonText=${this.localize.t('search.addRepository')}
                       @username-input=${this._handleUsernameInput}
@@ -1591,10 +1637,12 @@ export class GithubReleaseStats extends LitElement {
                             aria-expanded="false"
                           >
                             <div
-                              class="d-flex justify-content-between align-items-center me-3"
+                              class="d-flex justify-content-between align-items-center flex-grow-1 overflow-hidden me-2"
                             >
-                              <strong class="text-truncate me-3"
-                                ><i class="bi bi-github me-2"></i>
+                              <strong
+                                class="text-truncate me-3"
+                                title=${repoIdentifier}
+                                ><i class="bi bi-github me-2 flex-shrink-0"></i>
                                 ${repoIdentifier}</strong
                               >
                               <span
