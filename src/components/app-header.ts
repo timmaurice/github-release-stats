@@ -16,7 +16,11 @@ export class AppHeader extends LitElement {
       <header>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
           <div class="container">
-            <a class="navbar-brand" href="/github-release-stats/">
+            <a
+              class="navbar-brand"
+              href="/github-release-stats/"
+              data-umami-event="click-brand"
+            >
               <i class="bi bi-github"></i>
               ${this.localize.t('app.title')}
             </a>

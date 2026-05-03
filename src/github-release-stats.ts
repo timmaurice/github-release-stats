@@ -2,7 +2,7 @@ import { LitElement, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 import { repeat } from 'lit/directives/repeat.js'
-import { trackEvent, trackPageView } from './analytics'
+import { trackEvent } from './analytics'
 import type { GitHubRelease, BeforeInstallPromptEvent } from './types'
 import { Octokit } from '@octokit/rest'
 import type { RepoSummary, SortKey } from './components/summary-table'
@@ -344,8 +344,6 @@ export class GithubReleaseStats extends LitElement {
       url.searchParams.delete('repos') // Clear if no repos
     }
     history.pushState({}, '', url)
-    // Track the URL change as a page view in our SPA
-    trackPageView()
   }
 
   private _loadSetsFromStorage() {
@@ -541,8 +539,7 @@ export class GithubReleaseStats extends LitElement {
     ) {
       this._repos = [...this._repos, newRepo]
       trackEvent('add_repository', {
-        event_category: 'engagement',
-        event_label: `${newRepo.username}/${newRepo.repository}`,
+        repository: `${newRepo.username}/${newRepo.repository}`,
       })
       // Await the data fetch to ensure repoOrder is updated before the URL
       await this._fetchDataForRepos()
@@ -877,9 +874,8 @@ export class GithubReleaseStats extends LitElement {
       this._savedSets = { ...this._savedSets, [setName]: repoIdentifiers }
       this._saveSetsToStorage()
       trackEvent('save_set', {
-        event_category: 'engagement',
-        event_label: setName,
-        repo_count: repoIdentifiers.length,
+        name: setName,
+        count: repoIdentifiers.length,
       })
       input.value = '' // Clear input
       this._saveSetModal?.hide()
@@ -890,10 +886,7 @@ export class GithubReleaseStats extends LitElement {
     e.preventDefault()
     const repoIdentifiers = this._savedSets[setName]
     if (repoIdentifiers) {
-      trackEvent('load_set', {
-        event_category: 'engagement',
-        event_label: setName,
-      })
+      trackEvent('load_set', { name: setName })
       this._repos = repoIdentifiers
         .map((r) => {
           const [username, repository] = r.split('/')
@@ -920,10 +913,7 @@ export class GithubReleaseStats extends LitElement {
       delete newSets[setName]
       this._savedSets = newSets
       this._saveSetsToStorage()
-      trackEvent('delete_set', {
-        event_category: 'engagement',
-        event_label: setName,
-      })
+      trackEvent('delete_set', { name: setName })
     }
 
     this._showConfirmation(
@@ -949,11 +939,7 @@ export class GithubReleaseStats extends LitElement {
 
   private _handleExportCsv() {
     if (this._repoSummaryData.length === 0) return
-    trackEvent('export_csv', {
-      event_category: 'engagement',
-      event_label: 'Export CSV',
-      repo_count: this._repos.length,
-    })
+    trackEvent('export_csv', { count: this._repos.length })
 
     const headers = [
       'Repository',
@@ -1072,10 +1058,7 @@ export class GithubReleaseStats extends LitElement {
   private _handleLanguageChange(e: Event, lang: string) {
     e.preventDefault()
     setLocale(lang)
-    trackEvent('change_language', {
-      event_category: 'ui_interaction',
-      event_label: lang,
-    })
+    trackEvent('change_language', { locale: lang })
   }
 
   private _showConfirmation(
@@ -1754,6 +1737,7 @@ export class GithubReleaseStats extends LitElement {
               ) {
                 this._themeSetting = newTheme
                 localStorage.setItem('theme', newTheme)
+                trackEvent('change_theme', { theme: newTheme })
                 this._applyTheme()
               }
             }}
@@ -1779,6 +1763,7 @@ export class GithubReleaseStats extends LitElement {
           data-bs-target="#settingsModal"
           aria-label=${this.localize.t('settings.title') || 'Settings'}
           title=${this.localize.t('settings.title') || 'Settings'}
+          @click=${() => trackEvent('open_settings')}
         >
           <i class="bi bi-gear-fill"></i>
         </button>

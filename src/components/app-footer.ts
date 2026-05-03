@@ -28,6 +28,7 @@ export class AppFooter extends LitElement {
               rel="noopener noreferrer"
               class="text-muted text-decoration-none d-flex align-items-center gap-1"
               title=${this.localize.t('app.githubLinkTitle')}
+              data-umami-event="click-source-code"
             >
               <i class="bi bi-github"></i> ${this.localize.t('app.githubLink')}
             </a>

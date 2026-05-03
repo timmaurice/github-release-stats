@@ -43,6 +43,8 @@ export class ReleaseCard extends LitElement {
               href="${this.release.html_url}"
               target="_blank"
               class="text-decoration-none"
+              data-umami-event="click-release-tag"
+              data-umami-event-tag="${this.release.tag_name}"
               >${this.release.tag_name}</a
             >
           </h3>
@@ -72,6 +74,8 @@ export class ReleaseCard extends LitElement {
                       <a
                         href="${this.release.author.html_url}"
                         class="text-decoration-none"
+                        data-umami-event="click-author-link"
+                        data-umami-event-author="${this.release.author.login}"
                         >@${this.release.author.login}</a
                       >
                     </li>`
