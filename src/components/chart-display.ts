@@ -14,7 +14,16 @@ import type {
   ChartType,
 } from 'chart.js'
 import zoomPlugin from 'chartjs-plugin-zoom'
+
 import type { SortKey } from './summary-table'
+
+// Every chart this component renders is a line chart over time-based points;
+// some datasets carry a release tag as an extra `label` on each point.
+// Annotating the configs with these narrowed generics keeps them assignable —
+// the bare `ChartConfiguration` default widens TType to the union of all chart
+// types, whose intersected dataset options a 'line' dataset cannot satisfy.
+type LineChartPoint = Point & { label?: string }
+type LineChartConfiguration = ChartConfiguration<'line', LineChartPoint[]>
 
 const lastValueLinePlugin = {
   id: 'lastValueLine',
@@ -344,7 +353,7 @@ export class ChartDisplay extends LitElement {
     return { datasets }
   }
 
-  private _getLineChartConfig(): ChartConfiguration {
+  private _getLineChartConfig(): LineChartConfiguration {
     return {
       type: 'line',
       data: this._getLineChartData(),
@@ -380,7 +389,7 @@ export class ChartDisplay extends LitElement {
     }
   }
 
-  private _getStarChartConfig(): ChartConfiguration {
+  private _getStarChartConfig(): LineChartConfiguration {
     const datasets: ChartDataset<'line', Point[]>[] = []
     let colorIndex = 0
 
@@ -444,7 +453,7 @@ export class ChartDisplay extends LitElement {
     }
   }
 
-  private _getAssetSizeChartConfig(): ChartConfiguration {
+  private _getAssetSizeChartConfig(): LineChartConfiguration {
     const datasets: ChartDataset<'line', (Point & { label: string })[]>[] = []
     let colorIndex = 0
 
@@ -506,7 +515,7 @@ export class ChartDisplay extends LitElement {
     }
   }
 
-  private _getIssueChartConfig(): ChartConfiguration {
+  private _getIssueChartConfig(): LineChartConfiguration {
     const datasets: ChartDataset<'line', Point[]>[] = []
     let colorIndex = 0
 
@@ -583,7 +592,7 @@ export class ChartDisplay extends LitElement {
     }
   }
 
-  private _getPullRequestChartConfig(): ChartConfiguration {
+  private _getPullRequestChartConfig(): LineChartConfiguration {
     const datasets: ChartDataset<'line', Point[]>[] = []
     let colorIndex = 0
 
@@ -663,7 +672,7 @@ export class ChartDisplay extends LitElement {
     }
   }
 
-  private _getChartConfig(): ChartConfiguration {
+  private _getChartConfig(): LineChartConfiguration {
     switch (this.metric) {
       case 'size':
         return this._getAssetSizeChartConfig()

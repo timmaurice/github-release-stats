@@ -42,3 +42,15 @@ export async function setCache<T>(key: string, data: T): Promise<void> {
     console.error('Failed to write to cache:', err)
   }
 }
+
+/**
+ * Removes every entry from the API cache, so the next fetch goes to GitHub again.
+ */
+export async function clearCache(): Promise<void> {
+  try {
+    const db = await getDB()
+    await db.clear(STORE_NAME)
+  } catch (err) {
+    console.error('Failed to clear cache:', err)
+  }
+}

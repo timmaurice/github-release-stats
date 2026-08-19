@@ -103,13 +103,15 @@ export class SearchForm extends LitElement {
                 class="input-group-text"
                 title=${this.localize.t('search.repository')}
               >
-                ${this.suggestionsLoading
-                  ? html`<span
-                      class="spinner-border spinner-border-sm"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>`
-                  : html`<i class="bi bi-journal-code"></i>`}
+                ${
+                  this.suggestionsLoading
+                    ? html`<span
+                        class="spinner-border spinner-border-sm"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>`
+                    : html`<i class="bi bi-journal-code"></i>`
+                }
               </span>
               <input
                 id="repository-input"

@@ -35,7 +35,8 @@ A web application to visualize and compare download statistics, star history, op
 
 ### Performance
 
-- **IndexedDB Caching:** Historical data is cached locally to drastically speed up page loads and preserve your GitHub API rate limit.
+- **IndexedDB Caching:** Historical data is cached locally for 24 hours to drastically speed up page loads and preserve your GitHub API rate limit.
+- **Hard Refresh:** Click "Refresh" in the toolbar to discard the local cache and pull the latest data straight from GitHub.
 
 ### User Experience
 
@@ -65,6 +66,7 @@ A web application to visualize and compare download statistics, star history, op
     - Drag and drop the repository pills to reorder them.
     - Save your current set of repositories for later, or load a previously saved set.
     - Click "Copy Link" to get a shareable URL of your current comparison.
+    - Click "Refresh" to bypass the 24-hour local cache and refetch the current numbers from GitHub.
 
 ### API Rate Limits
 

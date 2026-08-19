@@ -30,6 +30,8 @@
     "pinDashboard": "固定到仪表板",
     "unpinDashboard": "取消固定仪表板",
     "pinned": "已固定！",
+    "refresh": "刷新",
+    "refreshed": "数据已刷新！",
     "clearAll": "全部清除"
   },
   "summaryTable": {

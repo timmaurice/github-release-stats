@@ -30,6 +30,8 @@
     "pinDashboard": "Pin to Dashboard",
     "unpinDashboard": "Unpin Dashboard",
     "pinned": "Pinned!",
+    "refresh": "Refresh",
+    "refreshed": "Data refreshed!",
     "clearAll": "Clear All"
   },
   "summaryTable": {

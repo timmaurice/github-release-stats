@@ -29,10 +29,9 @@ export class ReleaseCard extends LitElement {
 
     return html`
       <div
-        class="card mb-4 release ${isPreRelease ? 'pre-release' : ''} ${this
-          .badgeText === 'Latest release'
-          ? 'latest-release'
-          : ''}"
+        class="card mb-4 release ${isPreRelease ? 'pre-release' : ''} ${
+          this.badgeText === 'Latest release' ? 'latest-release' : ''
+        }"
       >
         <div
           class="card-header bg-transparent d-flex justify-content-between align-items-center"
@@ -48,14 +47,16 @@ export class ReleaseCard extends LitElement {
               >${this.release.tag_name}</a
             >
           </h3>
-          ${this.badgeText
-            ? html`<span
-                class="badge ${isPreRelease
-                  ? 'bg-warning text-dark'
-                  : 'bg-success'}"
-                >${this.badgeText}</span
-              >`
-            : ''}
+          ${
+            this.badgeText
+              ? html`<span
+                  class="badge ${
+                    isPreRelease ? 'bg-warning text-dark' : 'bg-success'
+                  }"
+                  >${this.badgeText}</span
+                >`
+              : ''
+          }
         </div>
         <div class="card-body">
           <div class="row">
@@ -66,67 +67,73 @@ export class ReleaseCard extends LitElement {
                 )}
               </h4>
               <ul class="list-unstyled">
-                ${this.release.author
-                  ? html`<li class="mb-2">
-                      <i class="bi bi-person me-2"></i>${this.localize.t(
-                        'releaseDetails.author'
-                      )}
-                      <a
-                        href="${this.release.author.html_url}"
-                        class="text-decoration-none"
-                        data-umami-event="click-author-link"
-                        data-umami-event-author="${this.release.author.login}"
-                        >@${this.release.author.login}</a
-                      >
-                    </li>`
-                  : ''}
+                ${
+                  this.release.author
+                    ? html`<li class="mb-2">
+                        <i class="bi bi-person me-2"></i>${this.localize.t(
+                          'releaseDetails.author'
+                        )}
+                        <a
+                          href="${this.release.author.html_url}"
+                          class="text-decoration-none"
+                          data-umami-event="click-author-link"
+                          data-umami-event-author="${this.release.author.login}"
+                          >@${this.release.author.login}</a
+                        >
+                      </li>`
+                    : ''
+                }
                 <li class="mb-2">
                   <i class="bi bi-calendar-event me-2"></i>${this.localize.t(
                     'releaseDetails.published'
                   )}:
                   ${this.release.published_at.split('T')[0]}
                 </li>
-                ${releaseDownloadCount
-                  ? html`<li>
-                      <i class="bi bi-download me-2"></i>${this.localize.t(
-                        'releaseDetails.totalDownloads'
-                      )}
-                    </li>`
-                  : ''}
+                ${
+                  releaseDownloadCount
+                    ? html`<li>
+                        <i class="bi bi-download me-2"></i>${this.localize.t(
+                          'releaseDetails.totalDownloads'
+                        )}
+                      </li>`
+                    : ''
+                }
               </ul>
             </div>
-            ${this.release.assets.length
-              ? html`
-                  <div class="col-md-6">
-                    <h4 class="h6 text-muted mb-3">
-                      <i class="bi bi-box-arrow-down me-2"></i
-                      >${this.localize.t('releaseDetails.assets')}
-                    </h4>
-                    <ul class="list-unstyled">
-                      ${map(
-                        this.release.assets,
-                        (asset) => html`
-                          <li class="mb-2 small">
-                            <code>${asset.name}</code>
-                            <div class="text-muted">
-                              (${(asset.size / 1048576.0).toFixed(2)}&nbsp;MiB)
-                              -
-                              ${this.localize.t(
-                                'releaseDetails.downloadsCount',
-                                {
-                                  count: this._formatNumber(
-                                    asset.download_count
-                                  ),
-                                }
-                              )}
-                            </div>
-                          </li>
-                        `
-                      )}
-                    </ul>
-                  </div>
-                `
-              : ''}
+            ${
+              this.release.assets.length
+                ? html`
+                    <div class="col-md-6">
+                      <h4 class="h6 text-muted mb-3">
+                        <i class="bi bi-box-arrow-down me-2"></i
+                        >${this.localize.t('releaseDetails.assets')}
+                      </h4>
+                      <ul class="list-unstyled">
+                        ${map(
+                          this.release.assets,
+                          (asset) => html`
+                            <li class="mb-2 small">
+                              <code>${asset.name}</code>
+                              <div class="text-muted">
+                                (${(asset.size / 1048576.0).toFixed(2)}&nbsp;MiB)
+                                -
+                                ${this.localize.t(
+                                  'releaseDetails.downloadsCount',
+                                  {
+                                    count: this._formatNumber(
+                                      asset.download_count
+                                    ),
+                                  }
+                                )}
+                              </div>
+                            </li>
+                          `
+                        )}
+                      </ul>
+                    </div>
+                  `
+                : ''
+            }
           </div>
         </div>
       </div>

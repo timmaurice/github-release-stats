@@ -30,6 +30,8 @@
     "pinDashboard": "An Dashboard anheften",
     "unpinDashboard": "Vom Dashboard lösen",
     "pinned": "Angeheftet!",
+    "refresh": "Aktualisieren",
+    "refreshed": "Daten aktualisiert!",
     "clearAll": "Alle löschen"
   },
   "summaryTable": {

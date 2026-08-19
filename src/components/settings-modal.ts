@@ -80,9 +80,9 @@ export class SettingsModal extends LitElement {
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title" id="settingsModalLabel">
-                <i class="bi bi-gear-fill me-2"></i>${this.localize.t(
-                  'settings.title'
-                ) || 'Settings'}
+                <i class="bi bi-gear-fill me-2"></i>${
+                  this.localize.t('settings.title') || 'Settings'
+                }
               </h5>
               <button
                 type="button"
@@ -112,18 +112,20 @@ export class SettingsModal extends LitElement {
                       aria-expanded="false"
                     >
                       <i class="bi bi-translate me-2"></i>
-                      ${getLocale() === 'de'
-                        ? 'Deutsch'
-                        : getLocale() === 'zh-CN'
-                          ? '简体中文'
-                          : 'English'}
+                      ${
+                        getLocale() === 'de'
+                          ? 'Deutsch'
+                          : getLocale() === 'zh-CN'
+                            ? '简体中文'
+                            : 'English'
+                      }
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                       <li>
                         <a
-                          class="dropdown-item ${getLocale() === 'en'
-                            ? 'active'
-                            : ''}"
+                          class="dropdown-item ${
+                            getLocale() === 'en' ? 'active' : ''
+                          }"
                           href="#"
                           @click=${(e: Event) =>
                             this._handleLanguageChange(e, 'en')}
@@ -132,9 +134,9 @@ export class SettingsModal extends LitElement {
                       </li>
                       <li>
                         <a
-                          class="dropdown-item ${getLocale() === 'de'
-                            ? 'active'
-                            : ''}"
+                          class="dropdown-item ${
+                            getLocale() === 'de' ? 'active' : ''
+                          }"
                           href="#"
                           @click=${(e: Event) =>
                             this._handleLanguageChange(e, 'de')}
@@ -143,9 +145,9 @@ export class SettingsModal extends LitElement {
                       </li>
                       <li>
                         <a
-                          class="dropdown-item ${getLocale() === 'zh-CN'
-                            ? 'active'
-                            : ''}"
+                          class="dropdown-item ${
+                            getLocale() === 'zh-CN' ? 'active' : ''
+                          }"
                           href="#"
                           @click=${(e: Event) =>
                             this._handleLanguageChange(e, 'zh-CN')}
@@ -170,60 +172,71 @@ export class SettingsModal extends LitElement {
                       aria-expanded="false"
                     >
                       <i
-                        class="bi ${this.theme === 'light'
-                          ? 'bi-sun-fill'
-                          : this.theme === 'dark'
-                            ? 'bi-moon-stars-fill'
-                            : 'bi-display'} me-2"
+                        class="bi ${
+                          this.theme === 'light'
+                            ? 'bi-sun-fill'
+                            : this.theme === 'dark'
+                              ? 'bi-moon-stars-fill'
+                              : 'bi-display'
+                        } me-2"
                       ></i>
-                      ${this.theme === 'light'
-                        ? this.localize.t('settings.themeLight') || 'Light Mode'
-                        : this.theme === 'dark'
-                          ? this.localize.t('settings.themeDark') || 'Dark Mode'
-                          : this.localize.t('settings.themeAuto') ||
-                            'Auto (System Default)'}
+                      ${
+                        this.theme === 'light'
+                          ? this.localize.t('settings.themeLight') ||
+                            'Light Mode'
+                          : this.theme === 'dark'
+                            ? this.localize.t('settings.themeDark') ||
+                              'Dark Mode'
+                            : this.localize.t('settings.themeAuto') ||
+                              'Auto (System Default)'
+                      }
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                       <li>
                         <a
-                          class="dropdown-item ${this.theme === 'auto'
-                            ? 'active'
-                            : ''}"
+                          class="dropdown-item ${
+                            this.theme === 'auto' ? 'active' : ''
+                          }"
                           href="#"
                           @click=${(e: Event) =>
                             this._handleThemeChange(e, 'auto')}
                         >
                           <i class="bi bi-display me-2"></i>
-                          ${this.localize.t('settings.themeAuto') ||
-                          'Auto (System Default)'}
+                          ${
+                            this.localize.t('settings.themeAuto') ||
+                            'Auto (System Default)'
+                          }
                         </a>
                       </li>
                       <li>
                         <a
-                          class="dropdown-item ${this.theme === 'light'
-                            ? 'active'
-                            : ''}"
+                          class="dropdown-item ${
+                            this.theme === 'light' ? 'active' : ''
+                          }"
                           href="#"
                           @click=${(e: Event) =>
                             this._handleThemeChange(e, 'light')}
                         >
                           <i class="bi bi-sun-fill me-2"></i>
-                          ${this.localize.t('settings.themeLight') ||
-                          'Light Mode'}
+                          ${
+                            this.localize.t('settings.themeLight') ||
+                            'Light Mode'
+                          }
                         </a>
                       </li>
                       <li>
                         <a
-                          class="dropdown-item ${this.theme === 'dark'
-                            ? 'active'
-                            : ''}"
+                          class="dropdown-item ${
+                            this.theme === 'dark' ? 'active' : ''
+                          }"
                           href="#"
                           @click=${(e: Event) =>
                             this._handleThemeChange(e, 'dark')}
                         >
                           <i class="bi bi-moon-stars-fill me-2"></i>
-                          ${this.localize.t('settings.themeDark') ||
-                          'Dark Mode'}
+                          ${
+                            this.localize.t('settings.themeDark') || 'Dark Mode'
+                          }
                         </a>
                       </li>
                     </ul>
@@ -245,8 +258,10 @@ export class SettingsModal extends LitElement {
                     @change=${this._handleFilterDependabotChange}
                   />
                   <label class="form-check-label" for="filterDependabotSwitch">
-                    ${this.localize.t('settings.filterDependabot') ||
-                    'Filter Dependabot PRs'}
+                    ${
+                      this.localize.t('settings.filterDependabot') ||
+                      'Filter Dependabot PRs'
+                    }
                   </label>
                 </div>
 
@@ -262,8 +277,10 @@ export class SettingsModal extends LitElement {
                     class="form-check-label"
                     for="showTotalDownloadsSwitch"
                   >
-                    ${this.localize.t('settings.showTotalDownloads') ||
-                    'Show Total Downloads column'}
+                    ${
+                      this.localize.t('settings.showTotalDownloads') ||
+                      'Show Total Downloads column'
+                    }
                   </label>
                 </div>
               </div>
@@ -277,15 +294,17 @@ export class SettingsModal extends LitElement {
               </p>
               <div class="mb-3">
                 <strong>${this.localize.t('settings.status')}</strong>
-                ${this.githubToken
-                  ? html`<span class="badge bg-success ms-2"
-                      ><i class="bi bi-check-circle-fill me-1"></i>
-                      ${this.localize.t('settings.authenticated')}</span
-                    >`
-                  : html`<span class="badge bg-secondary ms-2"
-                      ><i class="bi bi-x-circle-fill me-1"></i>
-                      ${this.localize.t('settings.anonymous')}</span
-                    >`}
+                ${
+                  this.githubToken
+                    ? html`<span class="badge bg-success ms-2"
+                        ><i class="bi bi-check-circle-fill me-1"></i>
+                        ${this.localize.t('settings.authenticated')}</span
+                      >`
+                    : html`<span class="badge bg-secondary ms-2"
+                        ><i class="bi bi-x-circle-fill me-1"></i>
+                        ${this.localize.t('settings.anonymous')}</span
+                      >`
+                }
               </div>
               <form @submit=${this._handleSaveTokenFormSubmit}>
                 <div class="input-group">

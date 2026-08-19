@@ -89,16 +89,18 @@ export class ResultsDisplay extends LitElement {
                     <td class="text-center text-nowrap">
                       ${this._formatDate(release.published_at)}
                     </td>
-                    ${this.showTotalDownloads
-                      ? html`<td class="text-end">
-                          ${this._formatNumber(
-                            release.assets.reduce(
-                              (sum, asset) => sum + asset.download_count,
-                              0
-                            )
-                          )}
-                        </td>`
-                      : ''}
+                    ${
+                      this.showTotalDownloads
+                        ? html`<td class="text-end">
+                            ${this._formatNumber(
+                              release.assets.reduce(
+                                (sum, asset) => sum + asset.download_count,
+                                0
+                              )
+                            )}
+                          </td>`
+                        : ''
+                    }
                   </tr>
                 `
               )}

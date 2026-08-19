@@ -26,6 +26,7 @@ import {
   getPullRequests,
   getOpenPullRequestsCount,
 } from './utils/github-api'
+import { clearCache } from './utils/cache'
 import { showToast } from './utils/toast'
 
 // Import sub-components
@@ -820,6 +821,28 @@ export class GithubReleaseStats extends LitElement {
     chartDisplay?.resetZoom()
   }
 
+  /**
+   * Hard reload: drops the 24h API cache and refetches everything for the
+   * repos currently on screen. Lazily-loaded data (stars, issues, PRs) is
+   * dropped from memory too, so it gets refetched when next needed.
+   */
+  private async _handleHardRefresh() {
+    if (this._loading || this._repos.length === 0) return
+
+    trackEvent('hard_refresh', { count: this._repos.length })
+
+    await clearCache()
+    this._stargazersData = new Map()
+    this._issuesData = new Map()
+    this._pullRequestsData = new Map()
+
+    await this._fetchDataForRepos()
+
+    if (!this._error) {
+      showToast(this.localize.t('comparison.refreshed'))
+    }
+  }
+
   private _handleClearAllRepos() {
     const clearAction = () => {
       this._repos = []
@@ -1175,47 +1198,51 @@ export class GithubReleaseStats extends LitElement {
               ></button>
             </div>
             <div class="modal-body">
-              ${Object.keys(this._savedSets).length > 0
-                ? html`
-                    <ul class="list-group">
-                      ${Object.keys(this._savedSets).map(
-                        (setName) => html`
-                          <li
-                            class="list-group-item d-flex justify-content-between align-items-center"
-                          >
-                            <span class="me-2"
-                              >${setName}
-                              ${this._justUpdatedSet === setName
-                                ? html`<span class="badge bg-success ms-2"
-                                    >${this.localize.t('modals.updated')}</span
-                                  >`
-                                : ''}</span
+              ${
+                Object.keys(this._savedSets).length > 0
+                  ? html`
+                      <ul class="list-group">
+                        ${Object.keys(this._savedSets).map(
+                          (setName) => html`
+                            <li
+                              class="list-group-item d-flex justify-content-between align-items-center"
                             >
-                            <div class="btn-group btn-group-sm">
-                              <button
-                                class="btn btn-outline-primary"
-                                @click=${() => this._handleUpdateSet(setName)}
-                                title=${this.localize.t('modals.updateSet')}
-                                ?disabled=${this._repos.length === 0}
+                              <span class="me-2"
+                                >${setName}
+                                ${
+                                  this._justUpdatedSet === setName
+                                    ? html`<span class="badge bg-success ms-2"
+                                        >${this.localize.t('modals.updated')}</span
+                                      >`
+                                    : ''
+                                }</span
                               >
-                                <i class="bi bi-arrow-clockwise"></i>
-                              </button>
-                              <button
-                                class="btn btn-outline-danger"
-                                @click=${() => this._handleDeleteSet(setName)}
-                                title=${this.localize.t('modals.deleteSet')}
-                              >
-                                <i class="bi bi-trash"></i>
-                              </button>
-                            </div>
-                          </li>
-                        `
-                      )}
-                    </ul>
-                  `
-                : html`<p class="text-muted">
-                    ${this.localize.t('modals.noSavedSets')}
-                  </p>`}
+                              <div class="btn-group btn-group-sm">
+                                <button
+                                  class="btn btn-outline-primary"
+                                  @click=${() => this._handleUpdateSet(setName)}
+                                  title=${this.localize.t('modals.updateSet')}
+                                  ?disabled=${this._repos.length === 0}
+                                >
+                                  <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                                <button
+                                  class="btn btn-outline-danger"
+                                  @click=${() => this._handleDeleteSet(setName)}
+                                  title=${this.localize.t('modals.deleteSet')}
+                                >
+                                  <i class="bi bi-trash"></i>
+                                </button>
+                              </div>
+                            </li>
+                          `
+                        )}
+                      </ul>
+                    `
+                  : html`<p class="text-muted">
+                      ${this.localize.t('modals.noSavedSets')}
+                    </p>`
+              }
             </div>
             <div class="modal-footer">
               <button
@@ -1287,420 +1314,459 @@ export class GithubReleaseStats extends LitElement {
 
       <main class="flex-shrink-0">
         <div class="container py-4">
-          ${this._repos.length === 0
-            ? html`
-                <!-- Initial Search View -->
-                <div class="row justify-content-center">
-                  <div class="col-lg-8">
-                    <div class="card shadow-sm">
-                      <div class="card-body p-4 p-md-5">
-                        <h1 class="h2 text-center mb-4">
-                          ${this.localize.t('comparison.title')}
-                        </h1>
-                        <p class="text-center text-muted mb-4">
-                          ${this.localize.t('comparison.description')}
-                        </p>
-                        <search-form
-                          .username=${this._newUsername}
-                          .repository=${this._newRepository}
-                          .suggestions=${this._filteredSuggestions}
-                          .suggestionsLoading=${this._suggestionsLoading}
-                          buttonText=${this.localize.t('search.getStats')}
-                          @username-input=${this._handleUsernameInput}
-                          @repository-input=${this._handleRepoInput}
-                          @username-change=${this._handleUsernameChange}
-                          @form-submit=${this._handleFormSubmit}
-                        ></search-form>
-                        ${confirmationTemplate}
-                      </div>
-                      ${Object.keys(this._savedSets).length > 0
-                        ? html` <div class="card-footer text-center">
-                            <div class="dropdown">
-                              <button
-                                class="btn btn-link text-secondary dropdown-toggle"
-                                type="button"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                              >
-                                ${this.localize.t('comparison.loadSet')}
-                              </button>
-                              <ul class="dropdown-menu">
-                                ${Object.keys(this._savedSets).map(
-                                  (setName) => html`
-                                    <li>
-                                      <a
-                                        class="dropdown-item"
-                                        href="#"
-                                        @click=${(e: Event) =>
-                                          this._handleLoadSet(e, setName)}
-                                        >${setName}</a
-                                      >
-                                    </li>
-                                  `
-                                )}
-                              </ul>
-                            </div>
-                          </div>`
-                        : ''}
-                    </div>
-                  </div>
-                </div>
-              `
-            : html`
-                <!-- Comparison View -->
-                <div
-                  class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4"
-                >
-                  <div class="d-flex align-items-center flex-wrap gap-2">
-                    <strong class="me-2"
-                      >${this.localize.t('comparison.comparing')}</strong
-                    >
-                    <div
-                      id="repo-pills-container"
-                      class="d-flex flex-wrap gap-2"
-                    >
-                      ${repeat(
-                        this._repoOrder,
-                        (identifier) => identifier,
-                        (identifier) => {
-                          const repo = this._repos.find(
-                            (r) =>
-                              `${r.username}/${r.repository}` === identifier
-                          )
-                          if (!repo) return ''
-                          return html`
-                            <span
-                              class="badge d-flex align-items-center p-2 text-bg-secondary mw-100"
-                              data-identifier=${identifier}
-                              style="cursor: move;"
-                            >
-                              <i class="bi bi-github me-2 flex-shrink-0"></i>
-                              <span class="text-truncate" title=${identifier}
-                                >${identifier}</span
-                              >
-                              <button
-                                type="button"
-                                class="btn-close btn-close-white ms-2 flex-shrink-0"
-                                aria-label="Remove ${identifier}"
-                                @click=${() => this._handleRemoveRepo(repo)}
-                              ></button>
-                            </span>
-                          `
+          ${
+            this._repos.length === 0
+              ? html`
+                  <!-- Initial Search View -->
+                  <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                      <div class="card shadow-sm">
+                        <div class="card-body p-4 p-md-5">
+                          <h1 class="h2 text-center mb-4">
+                            ${this.localize.t('comparison.title')}
+                          </h1>
+                          <p class="text-center text-muted mb-4">
+                            ${this.localize.t('comparison.description')}
+                          </p>
+                          <search-form
+                            .username=${this._newUsername}
+                            .repository=${this._newRepository}
+                            .suggestions=${this._filteredSuggestions}
+                            .suggestionsLoading=${this._suggestionsLoading}
+                            buttonText=${this.localize.t('search.getStats')}
+                            @username-input=${this._handleUsernameInput}
+                            @repository-input=${this._handleRepoInput}
+                            @username-change=${this._handleUsernameChange}
+                            @form-submit=${this._handleFormSubmit}
+                          ></search-form>
+                          ${confirmationTemplate}
+                        </div>
+                        ${
+                          Object.keys(this._savedSets).length > 0
+                            ? html` <div class="card-footer text-center">
+                                <div class="dropdown">
+                                  <button
+                                    class="btn btn-link text-secondary dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                  >
+                                    ${this.localize.t('comparison.loadSet')}
+                                  </button>
+                                  <ul class="dropdown-menu">
+                                    ${Object.keys(this._savedSets).map(
+                                      (setName) => html`
+                                        <li>
+                                          <a
+                                            class="dropdown-item"
+                                            href="#"
+                                            @click=${(e: Event) =>
+                                              this._handleLoadSet(e, setName)}
+                                            >${setName}</a
+                                          >
+                                        </li>
+                                      `
+                                    )}
+                                  </ul>
+                                </div>
+                              </div>`
+                            : ''
                         }
-                      )}
+                      </div>
                     </div>
                   </div>
+                `
+              : html`
+                  <!-- Comparison View -->
                   <div
-                    class="btn-group btn-group-sm flex-shrink-0"
-                    role="group"
+                    class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4"
                   >
-                    <div class="btn-group" role="group">
-                      <button
-                        type="button"
-                        class="btn btn-outline-secondary dropdown-toggle"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                      <strong class="me-2"
+                        >${this.localize.t('comparison.comparing')}</strong
                       >
-                        <i class="bi bi-bookmark-star me-lg-2"></i
-                        ><span class="d-none d-lg-inline"
-                          >${this.localize.t('comparison.sets')}</span
-                        >
-                      </button>
-                      <ul class="dropdown-menu">
-                        <li>
-                          <a
-                            class="dropdown-item"
-                            href="#"
-                            @click=${this._handleSaveSetClick}
-                            >${this.localize.t('comparison.saveSet')}</a
-                          >
-                        </li>
-                        ${Object.keys(this._savedSets).length > 0
-                          ? html`<li><hr class="dropdown-divider" /></li>`
-                          : ''}
-                        ${Object.keys(this._savedSets).map(
-                          (setName) => html`
-                            <li>
-                              <a
-                                class="dropdown-item"
-                                href="#"
-                                @click=${(e: Event) =>
-                                  this._handleLoadSet(e, setName)}
-                                >${setName}</a
+                      <div
+                        id="repo-pills-container"
+                        class="d-flex flex-wrap gap-2"
+                      >
+                        ${repeat(
+                          this._repoOrder,
+                          (identifier) => identifier,
+                          (identifier) => {
+                            const repo = this._repos.find(
+                              (r) =>
+                                `${r.username}/${r.repository}` === identifier
+                            )
+                            if (!repo) return ''
+                            return html`
+                              <span
+                                class="badge d-flex align-items-center p-2 text-bg-secondary mw-100"
+                                data-identifier=${identifier}
+                                style="cursor: move;"
                               >
-                            </li>
-                          `
+                                <i class="bi bi-github me-2 flex-shrink-0"></i>
+                                <span class="text-truncate" title=${identifier}
+                                  >${identifier}</span
+                                >
+                                <button
+                                  type="button"
+                                  class="btn-close btn-close-white ms-2 flex-shrink-0"
+                                  aria-label="Remove ${identifier}"
+                                  @click=${() => this._handleRemoveRepo(repo)}
+                                ></button>
+                              </span>
+                            `
+                          }
                         )}
-                        ${Object.keys(this._savedSets).length > 0
-                          ? html`
-                              <li><hr class="dropdown-divider" /></li>
+                      </div>
+                    </div>
+                    <div
+                      class="btn-group btn-group-sm flex-shrink-0"
+                      role="group"
+                    >
+                      <div class="btn-group" role="group">
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary dropdown-toggle"
+                          data-bs-toggle="dropdown"
+                          aria-expanded="false"
+                        >
+                          <i class="bi bi-bookmark-star me-lg-2"></i
+                          ><span class="d-none d-lg-inline"
+                            >${this.localize.t('comparison.sets')}</span
+                          >
+                        </button>
+                        <ul class="dropdown-menu">
+                          <li>
+                            <a
+                              class="dropdown-item"
+                              href="#"
+                              @click=${this._handleSaveSetClick}
+                              >${this.localize.t('comparison.saveSet')}</a
+                            >
+                          </li>
+                          ${
+                            Object.keys(this._savedSets).length > 0
+                              ? html`<li><hr class="dropdown-divider" /></li>`
+                              : ''
+                          }
+                          ${Object.keys(this._savedSets).map(
+                            (setName) => html`
                               <li>
                                 <a
                                   class="dropdown-item"
                                   href="#"
-                                  @click=${this._handleManageSetsClick}
-                                  >${this.localize.t(
-                                    'comparison.manageSets'
-                                  )}</a
+                                  @click=${(e: Event) =>
+                                    this._handleLoadSet(e, setName)}
+                                  >${setName}</a
                                 >
                               </li>
                             `
-                          : ''}
-                      </ul>
-                    </div>
-                    <button
-                      id="copy-link-button"
-                      class="btn btn-outline-secondary"
-                      aria-label=${this.localize.t('comparison.copyLink')}
-                      title=${this.localize.t('comparison.copyLink')}
-                      @click=${this._handleCopyLink}
-                    >
-                      <i class="bi bi-clipboard me-lg-2" aria-hidden="true"></i
-                      ><span class="d-none d-lg-inline" aria-hidden="true"
-                        >${this.localize.t('comparison.copyLink')}</span
+                          )}
+                          ${
+                            Object.keys(this._savedSets).length > 0
+                              ? html`
+                                  <li><hr class="dropdown-divider" /></li>
+                                  <li>
+                                    <a
+                                      class="dropdown-item"
+                                      href="#"
+                                      @click=${this._handleManageSetsClick}
+                                      >${this.localize.t(
+                                        'comparison.manageSets'
+                                      )}</a
+                                    >
+                                  </li>
+                                `
+                              : ''
+                          }
+                        </ul>
+                      </div>
+                      <button
+                        id="refresh-button"
+                        class="btn btn-outline-secondary"
+                        aria-label=${this.localize.t('comparison.refresh')}
+                        title=${this.localize.t('comparison.refresh')}
+                        ?disabled=${this._loading}
+                        @click=${this._handleHardRefresh}
                       >
-                    </button>
-                    <button
-                      class="btn btn-outline-secondary"
-                      aria-label=${this.localize.t('comparison.exportCsv')}
-                      title=${this.localize.t('comparison.exportCsv')}
-                      @click=${this._handleExportCsv}
-                    >
-                      <i class="bi bi-download me-lg-2" aria-hidden="true"></i
-                      ><span class="d-none d-lg-inline" aria-hidden="true"
-                        >${this.localize.t('comparison.exportCsv')}</span
+                        <i
+                          class="bi bi-arrow-clockwise me-lg-2"
+                          aria-hidden="true"
+                        ></i
+                        ><span class="d-none d-lg-inline" aria-hidden="true"
+                          >${this.localize.t('comparison.refresh')}</span
+                        >
+                      </button>
+                      <button
+                        id="copy-link-button"
+                        class="btn btn-outline-secondary"
+                        aria-label=${this.localize.t('comparison.copyLink')}
+                        title=${this.localize.t('comparison.copyLink')}
+                        @click=${this._handleCopyLink}
                       >
-                    </button>
-                    <button
-                      id="copy-markdown-button"
-                      class="btn btn-outline-secondary"
-                      aria-label=${this.localize.t('comparison.copyMarkdown')}
-                      title=${this.localize.t('comparison.copyMarkdown')}
-                      @click=${this._handleCopyMarkdown}
-                    >
-                      <i class="bi bi-markdown me-lg-2" aria-hidden="true"></i
-                      ><span class="d-none d-lg-inline" aria-hidden="true"
-                        >${this.localize.t('comparison.copyMarkdown')}</span
+                        <i
+                          class="bi bi-clipboard me-lg-2"
+                          aria-hidden="true"
+                        ></i
+                        ><span class="d-none d-lg-inline" aria-hidden="true"
+                          >${this.localize.t('comparison.copyLink')}</span
+                        >
+                      </button>
+                      <button
+                        class="btn btn-outline-secondary"
+                        aria-label=${this.localize.t('comparison.exportCsv')}
+                        title=${this.localize.t('comparison.exportCsv')}
+                        @click=${this._handleExportCsv}
                       >
-                    </button>
-                    <button
-                      id="pin-dashboard-button"
-                      class="btn btn-outline-secondary"
-                      aria-label=${this.localize.t(
-                        localStorage.getItem('default-dashboard') ===
-                          JSON.stringify(this._repoOrder)
-                          ? 'comparison.unpinDashboard'
-                          : 'comparison.pinDashboard'
-                      )}
-                      title=${this.localize.t(
-                        localStorage.getItem('default-dashboard') ===
-                          JSON.stringify(this._repoOrder)
-                          ? 'comparison.unpinDashboard'
-                          : 'comparison.pinDashboard'
-                      )}
-                      @click=${this._handlePinDashboard}
-                    >
-                      <i
-                        class="bi ${localStorage.getItem(
-                          'default-dashboard'
-                        ) === JSON.stringify(this._repoOrder)
-                          ? 'bi-pin-fill'
-                          : 'bi-pin-angle'} me-lg-2"
-                        aria-hidden="true"
-                      ></i
-                      ><span class="d-none d-lg-inline" aria-hidden="true"
-                        >${this.localize.t(
+                        <i class="bi bi-download me-lg-2" aria-hidden="true"></i
+                        ><span class="d-none d-lg-inline" aria-hidden="true"
+                          >${this.localize.t('comparison.exportCsv')}</span
+                        >
+                      </button>
+                      <button
+                        id="copy-markdown-button"
+                        class="btn btn-outline-secondary"
+                        aria-label=${this.localize.t('comparison.copyMarkdown')}
+                        title=${this.localize.t('comparison.copyMarkdown')}
+                        @click=${this._handleCopyMarkdown}
+                      >
+                        <i class="bi bi-markdown me-lg-2" aria-hidden="true"></i
+                        ><span class="d-none d-lg-inline" aria-hidden="true"
+                          >${this.localize.t('comparison.copyMarkdown')}</span
+                        >
+                      </button>
+                      <button
+                        id="pin-dashboard-button"
+                        class="btn btn-outline-secondary"
+                        aria-label=${this.localize.t(
                           localStorage.getItem('default-dashboard') ===
                             JSON.stringify(this._repoOrder)
                             ? 'comparison.unpinDashboard'
                             : 'comparison.pinDashboard'
-                        )}</span
+                        )}
+                        title=${this.localize.t(
+                          localStorage.getItem('default-dashboard') ===
+                            JSON.stringify(this._repoOrder)
+                            ? 'comparison.unpinDashboard'
+                            : 'comparison.pinDashboard'
+                        )}
+                        @click=${this._handlePinDashboard}
                       >
-                    </button>
-                    <button
-                      class="btn btn-outline-danger"
-                      aria-label=${this.localize.t('comparison.clearAll')}
-                      title=${this.localize.t('comparison.clearAll')}
-                      @click=${this._handleClearAllRepos}
-                    >
-                      <i class="bi bi-trash me-lg-2" aria-hidden="true"></i
-                      ><span class="d-none d-lg-inline" aria-hidden="true"
-                        >${this.localize.t('comparison.clearAll')}</span
+                        <i
+                          class="bi ${
+                            localStorage.getItem('default-dashboard') ===
+                            JSON.stringify(this._repoOrder)
+                              ? 'bi-pin-fill'
+                              : 'bi-pin-angle'
+                          } me-lg-2"
+                          aria-hidden="true"
+                        ></i
+                        ><span class="d-none d-lg-inline" aria-hidden="true"
+                          >${this.localize.t(
+                            localStorage.getItem('default-dashboard') ===
+                              JSON.stringify(this._repoOrder)
+                              ? 'comparison.unpinDashboard'
+                              : 'comparison.pinDashboard'
+                          )}</span
+                        >
+                      </button>
+                      <button
+                        class="btn btn-outline-danger"
+                        aria-label=${this.localize.t('comparison.clearAll')}
+                        title=${this.localize.t('comparison.clearAll')}
+                        @click=${this._handleClearAllRepos}
                       >
-                    </button>
-                  </div>
-                </div>
-
-                <div class="card shadow-sm mb-4">
-                  <div class="card-body">
-                    <search-form
-                      .username=${this._newUsername}
-                      .repository=${this._newRepository}
-                      .suggestions=${this._filteredSuggestions}
-                      .suggestionsLoading=${this._suggestionsLoading}
-                      buttonText=${this.localize.t('search.addRepository')}
-                      @username-input=${this._handleUsernameInput}
-                      @repository-input=${this._handleRepoInput}
-                      @username-change=${this._handleUsernameChange}
-                      @form-submit=${this._handleFormSubmit}
-                    ></search-form>
-                    ${confirmationTemplate}
-                  </div>
-                </div>
-
-                ${this._error
-                  ? html`<div class="alert alert-warning">${this._error}</div>`
-                  : ''}
-                ${this._authError
-                  ? html`<div class="alert alert-info" role="alert">
-                      <i class="bi bi-info-circle-fill me-2"></i>${this
-                        ._authError}
-                    </div>`
-                  : ''}
-
-                <summary-table
-                  .summaryData=${this._repoSummaryData}
-                  .repoOrder=${this._repoOrder}
-                  .sortKey=${this._sortKey}
-                  .sortDirection=${this._sortDirection}
-                  .showTotalDownloads=${this._showTotalDownloads}
-                  @request-sort=${this._handleRequestSort}
-                  @copy-repo-report=${this._handleCopyReport}
-                ></summary-table>
-
-                <div
-                  class="d-flex justify-content-end align-items-center mb-2 flex-wrap gap-2"
-                >
-                  <div
-                    class="d-flex justify-content-end"
-                    role="group"
-                    aria-label="Y-axis scale toggle"
-                  >
-                    <div class="btn-group btn-group-sm">
-                      <input
-                        type="radio"
-                        class="btn-check"
-                        name="scale-toggle"
-                        id="scale-log"
-                        autocomplete="off"
-                        .checked=${this._yAxisScale === 'logarithmic'}
-                        @change=${() => this._handleScaleChange('logarithmic')}
-                      />
-                      <label class="btn btn-outline-secondary" for="scale-log"
-                        ><i class="bi bi-graph-up me-2"></i>${this.localize.t(
-                          'charts.logarithmic'
-                        )}</label
-                      >
-
-                      <input
-                        type="radio"
-                        class="btn-check"
-                        name="scale-toggle"
-                        id="scale-linear"
-                        autocomplete="off"
-                        .checked=${this._yAxisScale === 'linear'}
-                        @change=${() => this._handleScaleChange('linear')}
-                      />
-                      <label
-                        class="btn btn-outline-secondary"
-                        for="scale-linear"
-                        ><i class="bi bi-bar-chart-steps me-2"></i
-                        >${this.localize.t('charts.linear')}</label
-                      >
+                        <i class="bi bi-trash me-lg-2" aria-hidden="true"></i
+                        ><span class="d-none d-lg-inline" aria-hidden="true"
+                          >${this.localize.t('comparison.clearAll')}</span
+                        >
+                      </button>
                     </div>
-                    <button
-                      class="btn btn-sm btn-outline-secondary ms-2"
-                      @click=${this._handleResetZoom}
-                      title=${this.localize.t('charts.resetZoom')}
-                    >
-                      <i class="bi bi-arrow-counterclockwise me-sm-2"></i
-                      ><span class="d-none d-sm-inline"
-                        >${this.localize.t('charts.resetZoom')}</span
-                      >
-                    </button>
                   </div>
-                </div>
 
-                <chart-display
-                  .releasesData=${this._releasesData}
-                  .stargazersData=${this._stargazersData}
-                  .issuesData=${this._issuesData}
-                  .pullRequestsData=${this._pullRequestsData}
-                  .repoOrder=${this._repoOrder}
-                  .metric=${this._chartMetric}
-                  .yAxisScale=${this._yAxisScale}
-                  .filterDependabot=${this._filterDependabot}
-                  .limitZoomOut=${true}
-                ></chart-display>
+                  <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                      <search-form
+                        .username=${this._newUsername}
+                        .repository=${this._newRepository}
+                        .suggestions=${this._filteredSuggestions}
+                        .suggestionsLoading=${this._suggestionsLoading}
+                        buttonText=${this.localize.t('search.addRepository')}
+                        @username-input=${this._handleUsernameInput}
+                        @repository-input=${this._handleRepoInput}
+                        @username-change=${this._handleUsernameChange}
+                        @form-submit=${this._handleFormSubmit}
+                      ></search-form>
+                      ${confirmationTemplate}
+                    </div>
+                  </div>
 
-                <div class="accordion" id="resultsAccordion">
-                  ${this._repoOrder.map((repoIdentifier) => {
-                    const releases =
-                      this._releasesData.get(repoIdentifier) || []
-                    const totalDownloads =
-                      this._downloadsData.get(repoIdentifier) || 0
+                  ${
+                    this._error
+                      ? html`<div class="alert alert-warning">
+                          ${this._error}
+                        </div>`
+                      : ''
+                  }
+                  ${
+                    this._authError
+                      ? html`<div class="alert alert-info" role="alert">
+                          <i class="bi bi-info-circle-fill me-2"></i>${
+                            this._authError
+                          }
+                        </div>`
+                      : ''
+                  }
 
-                    return html`
-                      <div class="accordion-item">
-                        <h2
-                          class="accordion-header"
-                          id="heading-${repoIdentifier.replace('/', '-')}"
+                  <summary-table
+                    .summaryData=${this._repoSummaryData}
+                    .repoOrder=${this._repoOrder}
+                    .sortKey=${this._sortKey}
+                    .sortDirection=${this._sortDirection}
+                    .showTotalDownloads=${this._showTotalDownloads}
+                    @request-sort=${this._handleRequestSort}
+                    @copy-repo-report=${this._handleCopyReport}
+                  ></summary-table>
+
+                  <div
+                    class="d-flex justify-content-end align-items-center mb-2 flex-wrap gap-2"
+                  >
+                    <div
+                      class="d-flex justify-content-end"
+                      role="group"
+                      aria-label="Y-axis scale toggle"
+                    >
+                      <div class="btn-group btn-group-sm">
+                        <input
+                          type="radio"
+                          class="btn-check"
+                          name="scale-toggle"
+                          id="scale-log"
+                          autocomplete="off"
+                          .checked=${this._yAxisScale === 'logarithmic'}
+                          @change=${() => this._handleScaleChange('logarithmic')}
+                        />
+                        <label class="btn btn-outline-secondary" for="scale-log"
+                          ><i class="bi bi-graph-up me-2"></i>${this.localize.t(
+                            'charts.logarithmic'
+                          )}</label
                         >
-                          <button
-                            class="accordion-button collapsed"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#collapse-${repoIdentifier.replace(
-                              '/',
-                              '-'
-                            )}"
-                            aria-expanded="false"
+
+                        <input
+                          type="radio"
+                          class="btn-check"
+                          name="scale-toggle"
+                          id="scale-linear"
+                          autocomplete="off"
+                          .checked=${this._yAxisScale === 'linear'}
+                          @change=${() => this._handleScaleChange('linear')}
+                        />
+                        <label
+                          class="btn btn-outline-secondary"
+                          for="scale-linear"
+                          ><i class="bi bi-bar-chart-steps me-2"></i
+                          >${this.localize.t('charts.linear')}</label
+                        >
+                      </div>
+                      <button
+                        class="btn btn-sm btn-outline-secondary ms-2"
+                        @click=${this._handleResetZoom}
+                        title=${this.localize.t('charts.resetZoom')}
+                      >
+                        <i class="bi bi-arrow-counterclockwise me-sm-2"></i
+                        ><span class="d-none d-sm-inline"
+                          >${this.localize.t('charts.resetZoom')}</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+
+                  <chart-display
+                    .releasesData=${this._releasesData}
+                    .stargazersData=${this._stargazersData}
+                    .issuesData=${this._issuesData}
+                    .pullRequestsData=${this._pullRequestsData}
+                    .repoOrder=${this._repoOrder}
+                    .metric=${this._chartMetric}
+                    .yAxisScale=${this._yAxisScale}
+                    .filterDependabot=${this._filterDependabot}
+                    .limitZoomOut=${true}
+                  ></chart-display>
+
+                  <div class="accordion" id="resultsAccordion">
+                    ${this._repoOrder.map((repoIdentifier) => {
+                      const releases =
+                        this._releasesData.get(repoIdentifier) || []
+                      const totalDownloads =
+                        this._downloadsData.get(repoIdentifier) || 0
+
+                      return html`
+                        <div class="accordion-item">
+                          <h2
+                            class="accordion-header"
+                            id="heading-${repoIdentifier.replace('/', '-')}"
                           >
-                            <div
-                              class="d-flex justify-content-between align-items-center flex-grow-1 overflow-hidden me-2"
+                            <button
+                              class="accordion-button collapsed"
+                              type="button"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#collapse-${repoIdentifier.replace(
+                                '/',
+                                '-'
+                              )}"
+                              aria-expanded="false"
                             >
-                              <strong
-                                class="text-truncate me-3"
-                                title=${repoIdentifier}
-                                ><i class="bi bi-github me-2 flex-shrink-0"></i>
-                                ${repoIdentifier}</strong
+                              <div
+                                class="d-flex justify-content-between align-items-center flex-grow-1 overflow-hidden me-2"
                               >
-                              ${this._showTotalDownloads
-                                ? html`
-                                    <span
-                                      class="d-none d-md-block text-muted text-nowrap flex-shrink-0"
-                                      >${this.localize.t(
-                                        'releaseDetails.totalDownloads'
-                                      )}
-                                      <span
-                                        class="badge bg-primary rounded-pill ms-2"
-                                        >${new Intl.NumberFormat(
-                                          getLocale()
-                                        ).format(totalDownloads)}</span
-                                      ></span
-                                    >
-                                  `
-                                : ''}
+                                <strong
+                                  class="text-truncate me-3"
+                                  title=${repoIdentifier}
+                                  ><i
+                                    class="bi bi-github me-2 flex-shrink-0"
+                                  ></i>
+                                  ${repoIdentifier}</strong
+                                >
+                                ${
+                                  this._showTotalDownloads
+                                    ? html`
+                                        <span
+                                          class="d-none d-md-block text-muted text-nowrap flex-shrink-0"
+                                          >${this.localize.t(
+                                            'releaseDetails.totalDownloads'
+                                          )}
+                                          <span
+                                            class="badge bg-primary rounded-pill ms-2"
+                                            >${new Intl.NumberFormat(
+                                              getLocale()
+                                            ).format(totalDownloads)}</span
+                                          ></span
+                                        >
+                                      `
+                                    : ''
+                                }
+                              </div>
+                            </button>
+                          </h2>
+                          <div
+                            id="collapse-${repoIdentifier.replace('/', '-')}"
+                            class="accordion-collapse collapse"
+                            data-bs-parent="#resultsAccordion"
+                          >
+                            <div class="accordion-body p-2">
+                              <results-display
+                                .releases=${releases}
+                                .showTotalDownloads=${this._showTotalDownloads}
+                              ></results-display>
                             </div>
-                          </button>
-                        </h2>
-                        <div
-                          id="collapse-${repoIdentifier.replace('/', '-')}"
-                          class="accordion-collapse collapse"
-                          data-bs-parent="#resultsAccordion"
-                        >
-                          <div class="accordion-body p-2">
-                            <results-display
-                              .releases=${releases}
-                              .showTotalDownloads=${this._showTotalDownloads}
-                            ></results-display>
                           </div>
                         </div>
-                      </div>
-                    `
-                  })}
-                </div>
-              `}
+                      `
+                    })}
+                  </div>
+                `
+          }
           ${modalsTemplate} ${confirmationModalTemplate}
           <settings-modal
             .filterDependabot=${this._filterDependabot}
@@ -1769,17 +1835,22 @@ export class GithubReleaseStats extends LitElement {
         </button>
       </div>
 
-      ${this._installPrompt
-        ? html`
-            <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-              <pwa-install-toast
-                .installPrompt=${this._installPrompt}
-                @install-pwa=${this._handlePwaInstall}
-                @dismiss-pwa=${this._handlePwaDismiss}
-              ></pwa-install-toast>
-            </div>
-          `
-        : ''}
+      ${
+        this._installPrompt
+          ? html`
+              <div
+                class="position-fixed bottom-0 end-0 p-3"
+                style="z-index: 11"
+              >
+                <pwa-install-toast
+                  .installPrompt=${this._installPrompt}
+                  @install-pwa=${this._handlePwaInstall}
+                  @dismiss-pwa=${this._handlePwaDismiss}
+                ></pwa-install-toast>
+              </div>
+            `
+          : ''
+      }
       ${this._loading ? html`<loading-spinner></loading-spinner>` : ''}
     `
   }

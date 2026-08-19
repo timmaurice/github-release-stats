@@ -123,21 +123,23 @@ export class RateLimitDisplay extends LitElement {
           </div>
         </div>
         <div class="text-muted small text-nowrap">
-          ${this._loading
-            ? html`<span
-                class="spinner-border spinner-border-sm"
-                role="status"
-              ></span>`
-            : html`<button
-                  class="btn btn-sm btn-link py-0 px-1"
-                  @click=${this._fetchRateLimit}
-                  title="Refresh rate limit"
-                >
-                  <i class="bi bi-arrow-clockwise"></i>
-                </button>
-                ${this.localize.t('rateLimit.resets', {
-                  time: this._getResetTime(),
-                })}`}
+          ${
+            this._loading
+              ? html`<span
+                  class="spinner-border spinner-border-sm"
+                  role="status"
+                ></span>`
+              : html`<button
+                    class="btn btn-sm btn-link py-0 px-1"
+                    @click=${this._fetchRateLimit}
+                    title="Refresh rate limit"
+                  >
+                    <i class="bi bi-arrow-clockwise"></i>
+                  </button>
+                  ${this.localize.t('rateLimit.resets', {
+                    time: this._getResetTime(),
+                  })}`
+          }
         </div>
       </div>
     `

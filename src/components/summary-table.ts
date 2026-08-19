@@ -137,12 +137,14 @@ export class SummaryTable extends LitElement {
                       class="d-flex justify-content-between align-items-center gap-2"
                     >
                       <span class="text-truncate" title=${repo.identifier}>
-                        ${repo.identifier.includes('/')
-                          ? html`<span
-                                class="d-none d-sm-inline fw-normal text-muted"
-                                >${repo.identifier.split('/')[0]}/</span
-                              ><span>${repo.identifier.split('/')[1]}</span>`
-                          : repo.identifier}
+                        ${
+                          repo.identifier.includes('/')
+                            ? html`<span
+                                  class="d-none d-sm-inline fw-normal text-muted"
+                                  >${repo.identifier.split('/')[0]}/</span
+                                ><span>${repo.identifier.split('/')[1]}</span>`
+                            : repo.identifier
+                        }
                       </span>
                       <div class="d-flex gap-1 flex-shrink-0">
                         <button
@@ -181,11 +183,13 @@ export class SummaryTable extends LitElement {
                   <td class="text-end ${responsiveClasses.size || ''}">
                     ${this._formatNumber(repo.size)}
                   </td>
-                  ${this.showTotalDownloads
-                    ? html`<td class="text-end">
-                        ${this._formatNumber(repo.totalDownloads)}
-                      </td>`
-                    : ''}
+                  ${
+                    this.showTotalDownloads
+                      ? html`<td class="text-end">
+                          ${this._formatNumber(repo.totalDownloads)}
+                        </td>`
+                      : ''
+                  }
                 </tr>
               `
             )}
