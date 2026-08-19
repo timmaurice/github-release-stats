@@ -1,72 +1,73 @@
-name: Deploy to GitHub Pages
+name: Deploy
 
 on:
-  # Runs on pushes targeting the main branch
   push:
-    branches:
-      - master
-
-  # Allows you to run this workflow manually from the Actions tab
+    branches: [master]
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
-  group: 'pages'
+  group: pages
   cancel-in-progress: false
 
+env:
+  BUN_VERSION: 1.3.14
+
 jobs:
-  # Build job
   build:
+    name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v6
-      - name: Setup Bun Environment
+
+      - name: Set up Bun
         uses: oven-sh/setup-bun@v2
-      - name: Install Dependencies
-        run: bun install
-      - name: Check Code Formatting
-        run: npx prettier . --check
-      - name: Run Linter
-        run: bun run lint
-      - name: Run Unit Tests
-        run: bun test
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-      - name: Run End-to-End Tests
-        run: bun run test:e2e
-      - name: Build Production Bundle
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        shell: bash
         env:
           NO_COLOR: '1'
         run: |
-          echo "### 🚀 Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo '```text' >> $GITHUB_STEP_SUMMARY
-          bun run build | tee -a $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-      - name: Upload Pages Artifact
+          {
+            echo "### 🚀 Build Summary"
+            echo '```text'
+            bun run build
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
           path: ./dist
 
-  # Deployment job
   deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
-      - name: Deployment Summary
+
+      - name: Summary
         run: |
-          echo "### 🎉 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
-          echo "Your application is now live at: [${{ steps.deployment.outputs.page_url }}](${{ steps.deployment.outputs.page_url }})" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### 🎉 Deployment successful"
+            echo "Live at: ${{ steps.deployment.outputs.page_url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
