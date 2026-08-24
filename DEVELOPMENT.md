@@ -35,9 +35,10 @@ The project uses a component-based architecture built with Lit and TypeScript.
 
 - `src/` - Application source code
   - `components/` - Lit Web Components (e.g., `chart-display`, `settings-modal`, `summary-table`)
+  - `controllers/` - Lit reactive controllers holding the app state (`settings`, `saved-sets`, `repo-data`)
   - `localization/` - i18n logic and locale files (`en.json`, `de.json`, `zh-CN.json`)
-  - `utils/` - Helper functions (API wrappers, export logic, toast notifications)
-  - `github-release-stats.ts` - The main application container and state manager
+  - `utils/` - Helper functions (API wrappers, caching, export logic, toast notifications)
+  - `github-release-stats.ts` - The main application container, wiring the controllers to the UI
   - `index.html` - The application entry point
 - `tests/` - End-to-End Playwright tests
 - `public/` - Static assets (icons, screenshots)
@@ -74,7 +75,14 @@ We use Bun's built-in test runner for unit tests and Playwright for End-to-End (
 
 ## 🎨 Architecture & State Management
 
-- **Global State**: The main `GithubReleaseStats` class (`src/github-release-stats.ts`) acts as the single source of truth. It manages the list of repositories, data fetched from GitHub, and user preferences.
+- **Global State**: State lives in three Lit reactive controllers that `GithubReleaseStats` (`src/github-release-stats.ts`) owns:
+  - `SettingsController` - theme, API token (and therefore the Octokit client) and the display toggles.
+  - `SavedSetsController` - the named repository sets the user can save and reload.
+  - `RepoDataController` - the repository list and everything fetched for it, including per-repository failures and truncation flags.
+    The host keeps only view-level state (form inputs, modals, the chart metric) and the render template.
+- **Partial Failures**: Repositories are fetched with `Promise.allSettled`, so one missing or private repository is reported inline instead of blanking out the dashboard. Failed entries stay in the URL and keep a remove button.
+- **Caching**: GitHub responses are cached in IndexedDB for 24 hours (`src/utils/cache.ts`). Once an entry goes stale, single-request endpoints are revalidated with the stored `ETag`; a `304 Not Modified` refreshes the entry without costing a rate-limit request.
+- **Truncated History**: Star, issue and pull request history is paginated up to a fixed cap. When the cap is hit, the result is flagged as `truncated` and the UI says the charts are incomplete rather than drawing a wrong series.
 - **Persistence**: User preferences (Language, Theme, API Token, Show Total Downloads, Dependabot Filter) are persisted in `localStorage`.
 - **Event-Driven UI**: Child components dispatch `CustomEvent`s (e.g., `@save-token`, `@theme-change`) to request state changes. The main class listens to these events, updates its state, and Lit automatically re-renders the necessary parts of the DOM.
 - **Localization**: We use a custom, lightweight localization controller (`src/localization/`). Keys are requested using `this.localize.t('key')` within components, and updates happen reactively when the language changes.

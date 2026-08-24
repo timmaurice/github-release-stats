@@ -1,3 +1,5 @@
+import 'fake-indexeddb/auto'
+
 globalThis.localStorage = {
   getItem: () => null,
   setItem: () => {},

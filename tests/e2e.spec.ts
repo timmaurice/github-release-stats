@@ -489,6 +489,54 @@ test.describe('GitHub Release Stats E2E', () => {
     ).toBeVisible()
   })
 
+  test('keeps the working repositories when one of them fails to load', async ({
+    page,
+  }) => {
+    // Registered after the beforeEach catch-all, so it wins for this repo.
+    await page.route(
+      'https://api.github.com/repos/ghost/deleted**',
+      async (route) => {
+        await route.fulfill({ status: 404, json: { message: 'Not Found' } })
+      }
+    )
+
+    const usernameInput = page.locator('#username-input').first()
+    const repoInput = page.locator('#repository-input').first()
+    const submitButton = page
+      .locator('search-form button[type="submit"]')
+      .first()
+
+    await expect(usernameInput).toBeVisible()
+    await usernameInput.fill('microsoft')
+    await repoInput.fill('vscode')
+    await submitButton.click()
+
+    const summaryTable = page.locator('summary-table')
+    await expect(
+      summaryTable.locator('td', { hasText: 'microsoft/vscode' })
+    ).toBeVisible({ timeout: 15000 })
+
+    await usernameInput.fill('ghost')
+    await repoInput.fill('deleted')
+    await submitButton.click()
+
+    // The failure is reported on its own...
+    const failureAlert = page.locator('.alert-danger')
+    await expect(failureAlert).toBeVisible({ timeout: 15000 })
+    await expect(failureAlert).toContainText('ghost/deleted')
+
+    // ...while the repository that loaded is still fully rendered.
+    await expect(
+      summaryTable.locator('td', { hasText: 'microsoft/vscode' })
+    ).toBeVisible()
+    await expect(page.locator('chart-display canvas')).toBeVisible()
+
+    // The failed repository stays removable rather than disappearing.
+    await expect(
+      page.locator('.badge.text-bg-danger', { hasText: 'ghost/deleted' })
+    ).toBeVisible()
+  })
+
   test('should handle network errors (404) gracefully', async ({ page }) => {
     const usernameInput = page.locator('#username-input').first()
     const repoInput = page.locator('#repository-input').first()

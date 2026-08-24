@@ -56,7 +56,8 @@
     "linear": "线性",
     "logarithmic": "对数",
     "resetZoom": "重置缩放",
-    "zoomHint": "使用鼠标滚轮缩放，点击并拖动平移。"
+    "zoomHint": "使用鼠标滚轮缩放，点击并拖动平移。",
+    "dataTruncated": "GitHub 仅允许翻阅部分历史记录，因此 {repos} 的图表基于不完整的数据。"
   },
   "releaseDetails": {
     "totalDownloads": "总下载量",
@@ -119,9 +120,12 @@
   },
   "errors": {
     "authRequired": "查看星标或未解决 Issues 的历史记录需要 API 密钥。请在下面的设置中添加一个 GitHub 个人访问令牌以启用此功能。",
-    "fetchRepoData": "获取仓库数据时发生错误。一个或多个仓库可能不存在，或者已超出 API 速率限制。",
+    "repoNotFound": "未找到仓库。它可能已被重命名、删除或设为私有。",
+    "repoFetchFailed": "无法加载该仓库。",
+    "someReposFailed": "部分仓库无法加载：",
     "fetchStarHistory": "获取星标历史数据失败。",
     "fetchIssueHistory": "获取 Issue 历史数据失败。",
+    "fetchPullRequestHistory": "获取拉取请求历史数据失败。",
     "rateLimitExceeded": "您已达到 GitHub API 速率限制。请稍后再试。",
     "networkError": "检查用户时发生网络错误。",
     "addRepoToSave": "请至少添加一个仓库以保存集合。",

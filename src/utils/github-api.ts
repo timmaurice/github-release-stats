@@ -1,8 +1,111 @@
-import type { RestEndpointMethodTypes } from '@octokit/rest'
 import { Octokit } from '@octokit/rest'
-import { getCache, setCache } from './cache'
+import type {
+  GitHubRelease,
+  IssueActivity,
+  PagedResult,
+  PullRequestActivity,
+  Stargazer,
+} from '../types'
+import { getCache, setCache, touchCache } from './cache'
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+const PER_PAGE = 100
+
+/** How many pages of history we are willing to pull for one repository. */
+const MAX_HISTORY_PAGES = 10
+
+type ResponseWithEtag<T> = {
+  data: T
+  headers: { etag?: string }
+}
+
+/**
+ * GitHub answers a conditional request with 304 when nothing changed, and
+ * Octokit surfaces that as a thrown error rather than a response.
+ */
+function isNotModified(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    (error as { status: unknown }).status === 304
+  )
+}
+
+function conditionalHeaders(etag?: string) {
+  return etag ? { 'if-none-match': etag } : undefined
+}
+
+/**
+ * Caches a single-request endpoint and revalidates it with the stored ETag once
+ * the entry goes stale. A 304 costs nothing against the rate limit, so an
+ * unchanged repository is effectively free to re-check.
+ */
+async function cachedWithEtag<T>(
+  cacheKey: string,
+  request: (etag?: string) => Promise<ResponseWithEtag<T>>
+): Promise<T> {
+  const cached = await getCache<T>(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
+  try {
+    const response = await request(cached?.etag)
+    await setCache(cacheKey, response.data, { etag: response.headers.etag })
+    return response.data
+  } catch (error) {
+    if (isNotModified(error) && cached) {
+      await touchCache(cacheKey)
+      return cached.data
+    }
+    throw error
+  }
+}
+
+/**
+ * Caches a paginated collection, preserving whether it had to be cut short.
+ * These endpoints span many requests, so a single ETag cannot describe them.
+ */
+async function cachedPages<T>(
+  cacheKey: string,
+  fetchAll: () => Promise<PagedResult<T>>
+): Promise<PagedResult<T>> {
+  const cached = await getCache<T[]>(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return { data: cached.data, truncated: cached.truncated === true }
+  }
+
+  const result = await fetchAll()
+  await setCache(cacheKey, result.data, { truncated: result.truncated })
+  return result
+}
+
+/**
+ * Drains a paginated iterator up to `MAX_HISTORY_PAGES`. A full final page at
+ * the cap means GitHub still had more to give, which is reported as truncated.
+ */
+async function collectPages<TPage, TItem>(
+  iterator: AsyncIterable<{ data: TPage[] }>,
+  map: (page: TPage[]) => TItem[]
+): Promise<PagedResult<TItem>> {
+  const items: TItem[] = []
+  let pages = 0
+  let lastPageSize = 0
+
+  for await (const { data } of iterator) {
+    items.push(...map(data))
+    lastPageSize = data.length
+    pages++
+    if (pages >= MAX_HISTORY_PAGES) break
+  }
+
+  return {
+    data: items,
+    truncated: pages >= MAX_HISTORY_PAGES && lastPageSize === PER_PAGE,
+  }
+}
 
 /**
  * Fetches the user data by username.
@@ -18,7 +121,7 @@ export async function getUserByUsername(octokit: Octokit, username: string) {
 export async function listUserRepos(octokit: Octokit, username: string) {
   return await octokit.paginate(octokit.rest.repos.listForUser, {
     username,
-    per_page: 100,
+    per_page: PER_PAGE,
   })
 }
 
@@ -29,23 +132,19 @@ export async function getRepoReleases(
   octokit: Octokit,
   owner: string,
   repo: string
-): Promise<RestEndpointMethodTypes['repos']['listReleases']['response']> {
-  const cacheKey = `releases-${owner}-${repo}`
-  const cached =
-    await getCache<
-      RestEndpointMethodTypes['repos']['listReleases']['response']
-    >(cacheKey)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.data
-  }
-
-  const response = await octokit.rest.repos.listReleases({
-    owner,
-    repo,
-    per_page: 30,
+): Promise<GitHubRelease[]> {
+  return cachedWithEtag(`releases-${owner}-${repo}`, async (etag) => {
+    const response = await octokit.rest.repos.listReleases({
+      owner,
+      repo,
+      per_page: 30,
+      headers: conditionalHeaders(etag),
+    })
+    return {
+      data: response.data as unknown as GitHubRelease[],
+      headers: response.headers,
+    }
   })
-  await setCache(cacheKey, response)
-  return response
 }
 
 /**
@@ -56,144 +155,103 @@ export async function getRepoDetails(
   owner: string,
   repo: string
 ) {
-  return await octokit.rest.repos.get({
-    owner,
-    repo,
+  return cachedWithEtag(`repo-details-${owner}-${repo}`, async (etag) => {
+    const response = await octokit.rest.repos.get({
+      owner,
+      repo,
+      headers: conditionalHeaders(etag),
+    })
+    return { data: response.data, headers: response.headers }
   })
 }
 
 /**
- * Fetches all stargazers with timestamps for a repository using pagination.
+ * Fetches stargazers with timestamps for a repository using pagination.
  */
 export async function getStargazers(
   octokit: Octokit,
   owner: string,
   repo: string
-) {
-  const cacheKey = `stargazers-${owner}-${repo}`
-  const cached = await getCache<{ starred_at: string }[]>(cacheKey)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.data
-  }
-
-  const stargazers: { starred_at: string }[] = []
-  const iterator = octokit.paginate.iterator(
-    octokit.rest.activity.listStargazersForRepo,
-    {
-      owner,
-      repo,
-      per_page: 100,
-      headers: {
-        accept: 'application/vnd.github.star+json',
-      },
-    }
-  )
-
-  let pageCount = 0
-  const MAX_STARGAZER_PAGES = 10 // Fetch up to 1000 stars to avoid hitting rate limits on very popular repos.
-
-  for await (const { data: pageData } of iterator) {
-    const typedPageData = pageData as { starred_at: string }[]
-    stargazers.push(...typedPageData)
-    pageCount++
-    if (pageCount >= MAX_STARGAZER_PAGES) {
-      break
-    }
-  }
-
-  await setCache(cacheKey, stargazers)
-  return stargazers
-}
-
-/**
- * Fetches all issues (open and closed) with timestamps for a repository using pagination.
- */
-export async function getIssues(octokit: Octokit, owner: string, repo: string) {
-  const cacheKey = `issues-${owner}-${repo}`
-  const cached =
-    await getCache<{ created_at: string; closed_at: string | null }[]>(cacheKey)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.data
-  }
-
-  const issues: { created_at: string; closed_at: string | null }[] = []
-  const iterator = octokit.paginate.iterator(octokit.rest.issues.listForRepo, {
-    owner,
-    repo,
-    per_page: 100,
-    state: 'all', // we need both open and closed to track over time
-  })
-
-  let pageCount = 0
-  const MAX_ISSUE_PAGES = 10
-
-  for await (const { data: pageData } of iterator) {
-    // The response contains pull requests as well, we should filter them out.
-    const issuesOnly = pageData.filter((issue) => !issue.pull_request)
-    issues.push(
-      ...issuesOnly.map((i) => ({
-        created_at: i.created_at,
-        closed_at: i.closed_at || null,
-      }))
+): Promise<PagedResult<Stargazer>> {
+  return cachedPages(`stargazers-${owner}-${repo}`, () =>
+    collectPages(
+      // The star+json media type swaps the plain user payload for one carrying
+      // `starred_at`, which the generated response types do not narrow to.
+      octokit.paginate.iterator(octokit.rest.activity.listStargazersForRepo, {
+        owner,
+        repo,
+        per_page: PER_PAGE,
+        headers: {
+          accept: 'application/vnd.github.star+json',
+        },
+      }) as AsyncIterable<{ data: Stargazer[] }>,
+      (page) => page
     )
-    pageCount++
-    if (pageCount >= MAX_ISSUE_PAGES) {
-      break
-    }
-  }
-
-  await setCache(cacheKey, issues)
-  return issues
+  )
 }
 
 /**
- * Fetches all pull requests (open and closed) with timestamps for a repository using pagination.
+ * Fetches issues (open and closed) with timestamps for a repository.
+ */
+export async function getIssues(
+  octokit: Octokit,
+  owner: string,
+  repo: string
+): Promise<PagedResult<IssueActivity>> {
+  return cachedPages(`issues-${owner}-${repo}`, () =>
+    collectPages(
+      octokit.paginate.iterator(octokit.rest.issues.listForRepo, {
+        owner,
+        repo,
+        per_page: PER_PAGE,
+        state: 'all', // we need both open and closed to track over time
+      }),
+      // The response contains pull requests as well, we should filter them out.
+      (page) =>
+        page
+          .filter((issue) => !issue.pull_request)
+          .map((issue) => ({
+            created_at: issue.created_at,
+            closed_at: issue.closed_at || null,
+          }))
+    )
+  )
+}
+
+/**
+ * Fetches pull requests (open and closed) with timestamps for a repository.
  */
 export async function getPullRequests(
   octokit: Octokit,
   owner: string,
   repo: string
-) {
-  const cacheKey = `prs-${owner}-${repo}`
-  const cached =
-    await getCache<
-      { created_at: string; closed_at: string | null; author: string }[]
-    >(cacheKey)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.data
-  }
-
-  const prs: {
-    created_at: string
-    closed_at: string | null
-    author: string
-  }[] = []
-  const iterator = octokit.paginate.iterator(octokit.rest.pulls.list, {
-    owner,
-    repo,
-    per_page: 100,
-    state: 'all',
-  })
-
-  let pageCount = 0
-  const MAX_PR_PAGES = 10
-
-  for await (const { data: pageData } of iterator) {
-    prs.push(
-      ...pageData.map((pr) => ({
-        created_at: pr.created_at,
-        closed_at: pr.closed_at || null,
-        author: pr.user?.login || '',
-      }))
+): Promise<PagedResult<PullRequestActivity>> {
+  return cachedPages(`prs-${owner}-${repo}`, () =>
+    collectPages(
+      octokit.paginate.iterator(octokit.rest.pulls.list, {
+        owner,
+        repo,
+        per_page: PER_PAGE,
+        state: 'all',
+      }),
+      (page) =>
+        page.map((pr) => ({
+          created_at: pr.created_at,
+          closed_at: pr.closed_at || null,
+          author: pr.user?.login || '',
+        }))
     )
-    pageCount++
-    if (pageCount >= MAX_PR_PAGES) {
-      break
-    }
-  }
+  )
+}
 
-  await setCache(cacheKey, prs)
-  return prs
+/**
+ * Reads the last page number out of a Link header, which is how GitHub lets us
+ * count a collection without downloading it.
+ */
+export function parseLastPage(link: string | undefined): number | null {
+  if (!link) return null
+  const match = link.match(/[?&]page=(\d+)[^>]*>;\s*rel="last"/)
+  return match?.[1] ? parseInt(match[1], 10) : null
 }
 
 /**
@@ -206,23 +264,23 @@ export async function getOpenPullRequestsCount(
   filterDependabot: boolean = false
 ): Promise<{ displayCount: number; totalCount: number }> {
   const cacheKey = `open-prs-counts-${owner}-${repo}-${filterDependabot}`
-  const cached = await getCache<{ displayCount: number; totalCount: number }>(
-    cacheKey
-  )
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.data
-  }
-
-  let displayCount = 0
-  let totalCount = 0
 
   if (filterDependabot) {
     // When filtering dependabot, we must fetch the open PRs to inspect the author.
+    const cached = await getCache<{ displayCount: number; totalCount: number }>(
+      cacheKey
+    )
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data
+    }
+
+    let displayCount = 0
+    let totalCount = 0
     const iterator = octokit.paginate.iterator(octokit.rest.pulls.list, {
       owner,
       repo,
       state: 'open',
-      per_page: 100,
+      per_page: PER_PAGE,
     })
 
     for await (const { data: pageData } of iterator) {
@@ -232,31 +290,30 @@ export async function getOpenPullRequestsCount(
       displayCount += nonDependabotPRs.length
       totalCount += pageData.length
     }
-  } else {
-    // If not filtering, we can use the highly-optimized headers method.
-    const { data, headers } = await octokit.rest.pulls.list({
+
+    const result = { displayCount, totalCount }
+    await setCache(cacheKey, result)
+    return result
+  }
+
+  // If not filtering, we can use the highly-optimized headers method.
+  return cachedWithEtag(cacheKey, async (etag) => {
+    const response = await octokit.rest.pulls.list({
       owner,
       repo,
       state: 'open',
       per_page: 1,
+      headers: conditionalHeaders(etag),
     })
 
-    if (data.length === 0) {
-      totalCount = 0
-    } else if (!headers.link) {
-      totalCount = 1
-    } else {
-      const match = headers.link.match(/&page=(\d+)>; rel="last"/)
-      if (match && match[1]) {
-        totalCount = parseInt(match[1], 10)
-      } else {
-        totalCount = 1
-      }
-    }
-    displayCount = totalCount
-  }
+    const totalCount =
+      response.data.length === 0
+        ? 0
+        : (parseLastPage(response.headers.link) ?? 1)
 
-  const result = { displayCount, totalCount }
-  await setCache(cacheKey, result)
-  return result
+    return {
+      data: { displayCount: totalCount, totalCount },
+      headers: response.headers,
+    }
+  })
 }

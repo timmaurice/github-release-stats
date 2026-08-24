@@ -56,7 +56,8 @@
     "linear": "Linear",
     "logarithmic": "Logarithmisch",
     "resetZoom": "Zoom zurücksetzen",
-    "zoomHint": "Zum Zoomen das Mausrad verwenden und zum Verschieben klicken und ziehen."
+    "zoomHint": "Zum Zoomen das Mausrad verwenden und zum Verschieben klicken und ziehen.",
+    "dataTruncated": "GitHub lässt uns nur einen Teil der Historie abrufen. Die Diagramme für {repos} beruhen daher auf unvollständigen Daten."
   },
   "releaseDetails": {
     "totalDownloads": "Downloads gesamt",
@@ -119,9 +120,12 @@
   },
   "errors": {
     "authRequired": "Ein API-Schlüssel ist erforderlich, um den Verlauf für Sterne oder offene Issues anzuzeigen. Bitte fügen Sie ein persönliches GitHub-Zugriffstoken in den Einstellungen hinzu, um diese Funktion zu aktivieren.",
-    "fetchRepoData": "Beim Abrufen der Repository-Daten ist ein Fehler aufgetreten. Ein oder mehrere Repositories existieren möglicherweise nicht oder das API-Ratenlimit wurde überschritten.",
+    "repoNotFound": "Repository nicht gefunden. Es wurde möglicherweise umbenannt, gelöscht oder auf privat gestellt.",
+    "repoFetchFailed": "Dieses Repository konnte nicht geladen werden.",
+    "someReposFailed": "Einige Repositories konnten nicht geladen werden:",
     "fetchStarHistory": "Fehler beim Abrufen der Stern-Verlaufsdaten.",
     "fetchIssueHistory": "Fehler beim Abrufen der Issue-Verlaufsdaten.",
+    "fetchPullRequestHistory": "Fehler beim Abrufen der Pull-Request-Verlaufsdaten.",
     "rateLimitExceeded": "Sie haben das GitHub-API-Ratenlimit erreicht. Bitte warten Sie eine Weile, bevor Sie es erneut versuchen.",
     "networkError": "Beim Überprüfen des Benutzers ist ein Netzwerkfehler aufgetreten.",
     "addRepoToSave": "Fügen Sie mindestens ein Repository hinzu, um ein Set zu speichern.",

@@ -56,7 +56,8 @@
     "linear": "Linear",
     "logarithmic": "Logarithmic",
     "resetZoom": "Reset Zoom",
-    "zoomHint": "Use mouse wheel to zoom, and click and drag to pan."
+    "zoomHint": "Use mouse wheel to zoom, and click and drag to pan.",
+    "dataTruncated": "GitHub only lets us page through part of a repository's history, so the charts for {repos} are based on an incomplete series."
   },
   "releaseDetails": {
     "totalDownloads": "Total Downloads",
@@ -119,9 +120,12 @@
   },
   "errors": {
     "authRequired": "An API key is required to view history for Stars or Open Issues. Please add a GitHub Personal Access Token in the settings below to enable this feature.",
-    "fetchRepoData": "An error occurred while fetching repository data. One or more repositories might not exist or the API rate limit was exceeded.",
+    "repoNotFound": "Repository not found. It may have been renamed, deleted, or made private.",
+    "repoFetchFailed": "This repository could not be loaded.",
+    "someReposFailed": "Some repositories could not be loaded:",
     "fetchStarHistory": "Failed to fetch star history data.",
     "fetchIssueHistory": "Failed to fetch issue history data.",
+    "fetchPullRequestHistory": "Failed to fetch pull request history data.",
     "rateLimitExceeded": "You've hit the GitHub API rate limit. Please wait a while before trying again.",
     "networkError": "A network error occurred while checking the user.",
     "addRepoToSave": "Add at least one repository to save a set.",
