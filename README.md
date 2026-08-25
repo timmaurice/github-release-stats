@@ -21,6 +21,7 @@ A web application to visualize and compare download statistics, star history, op
 - **Dynamic Chart Metric:** The chart automatically updates to visualize the metric you sort by in the summary table.
 - **Customizable Tables:** Toggle the "Total Downloads" column on or off to focus on the metrics you care about most.
 - **Filter Dependabot PRs:** Exclude automated Dependabot pull requests for a cleaner view of active contributions.
+- **Hide Pre-releases:** Exclude releases GitHub marks as a pre-release, so betas and release candidates stay out of the latest version, the charts and the download totals.
 - **Linear & Logarithmic Scales:** Switch the chart's Y-axis scale for better data analysis.
 - **Zoom & Pan:** Zoom in on specific time ranges within the charts.
 

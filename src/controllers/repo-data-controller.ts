@@ -25,8 +25,8 @@ export interface RepoRef {
 export interface RepoDataOptions {
   getOctokit: () => Octokit
   getFilterDependabot: () => boolean
+  getHidePreReleases: () => boolean
   t: (key: string, replacements?: Record<string, string | number>) => string
-  /** Called whenever the display order changes, so the host can sync the URL. */
   onOrderChange: () => void
 }
 
@@ -47,11 +47,14 @@ function statusOf(error: unknown): number | undefined {
   return undefined
 }
 
-/**
- * Owns the repository list and everything fetched for it. Failures are tracked
- * per repository so one bad entry cannot blank out the whole dashboard, and
- * incomplete history is flagged rather than silently charted.
- */
+function isRateLimited(error: unknown): boolean {
+  const headers = (
+    error as { response?: { headers?: Record<string, string | undefined> } }
+  )?.response?.headers
+  return headers?.['x-ratelimit-remaining'] === '0'
+}
+
+/** Owns the repository list and everything fetched for it. */
 export class RepoDataController {
   private host: ReactiveControllerHost
   private options: RepoDataOptions
@@ -69,9 +72,7 @@ export class RepoDataController {
   loading = false
   error = ''
 
-  /** Per-repository failure messages, keyed by `owner/name`. */
   repoErrors: Map<string, string> = new Map()
-  /** Which series had to be cut short, keyed by `owner/name`. */
   truncated: Map<string, Set<TruncatedDataset>> = new Map()
 
   constructor(host: ReactiveControllerHost, options: RepoDataOptions) {
@@ -91,7 +92,6 @@ export class RepoDataController {
     return [...this.repoErrors.keys()]
   }
 
-  /** Identifiers whose charts are drawn from an incomplete history. */
   get truncatedIdentifiers(): string[] {
     return [...this.truncated.entries()]
       .filter(([, datasets]) => datasets.size > 0)
@@ -151,7 +151,6 @@ export class RepoDataController {
     this.notify()
   }
 
-  /** Drops cached history so the next access refetches it from GitHub. */
   resetLazyData() {
     this.stargazersData = new Map()
     this.issuesData = new Map()
@@ -171,18 +170,19 @@ export class RepoDataController {
       case 404:
         return this.options.t('errors.repoNotFound')
       case 401:
-      case 403:
+        return this.options.t('errors.invalidToken')
+      case 429:
         return this.options.t('errors.rateLimitExceeded')
+      case 403:
+        return isRateLimited(error)
+          ? this.options.t('errors.rateLimitExceeded')
+          : this.options.t('errors.repoForbidden')
       default:
         return this.options.t('errors.repoFetchFailed')
     }
   }
 
-  /**
-   * Loads the headline data for every repository. Each repository settles on
-   * its own, so a deleted or private entry is reported inline while the rest of
-   * the dashboard still renders.
-   */
+  /** Loads the headline data for every repository. */
   async fetchAll() {
     this.loading = true
     this.error = ''
@@ -191,6 +191,7 @@ export class RepoDataController {
 
     const octokit = this.options.getOctokit()
     const filterDependabot = this.options.getFilterDependabot()
+    const hidePreReleases = this.options.getHidePreReleases()
 
     const settled = await Promise.allSettled(
       this.repos.map(async (repo) => {
@@ -225,7 +226,9 @@ export class RepoDataController {
       }
 
       const { releases, details, prCounts } = outcome.value
-      const published = releases.filter((r) => !!r.published_at)
+      const published = releases.filter(
+        (r) => !!r.published_at && !(hidePreReleases && r.prerelease)
+      )
       releasesData.set(identifier, published)
 
       const totalDownloads = published.reduce(
@@ -269,16 +272,12 @@ export class RepoDataController {
 
   setManualOrder(order: string[]) {
     this.order = order
-    // 'manual' marks the order as user-defined rather than column-driven,
-    // which also hides the sort icons.
     this.sortKey = 'manual'
     this.notify()
     this.options.onOrderChange()
   }
 
-  /**
-   * Re-orders the dashboard, lazily pulling the history a metric needs.
-   */
+  /** Re-orders the dashboard, lazily pulling the history a metric needs. */
   async sortBy(key: SortKey, retainDirection = false) {
     if (key === 'manual') return
 
@@ -339,10 +338,6 @@ export class RepoDataController {
     if (key === 'openPullRequests') await this.loadPullRequests()
   }
 
-  /**
-   * Fetches one lazily-loaded series for every repository still missing it,
-   * recording any truncation and surfacing failures as a banner-level error.
-   */
   private async loadSeries<T>(
     dataset: TruncatedDataset,
     current: Map<string, T[]>,

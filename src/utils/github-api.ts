@@ -20,10 +20,7 @@ type ResponseWithEtag<T> = {
   headers: { etag?: string }
 }
 
-/**
- * GitHub answers a conditional request with 304 when nothing changed, and
- * Octokit surfaces that as a thrown error rather than a response.
- */
+/** Octokit surfaces a 304 as a thrown error rather than a response. */
 function isNotModified(error: unknown): boolean {
   return (
     typeof error === 'object' &&
@@ -37,11 +34,7 @@ function conditionalHeaders(etag?: string) {
   return etag ? { 'if-none-match': etag } : undefined
 }
 
-/**
- * Caches a single-request endpoint and revalidates it with the stored ETag once
- * the entry goes stale. A 304 costs nothing against the rate limit, so an
- * unchanged repository is effectively free to re-check.
- */
+/** Caches an endpoint and revalidates it with the stored ETag once stale. */
 async function cachedWithEtag<T>(
   cacheKey: string,
   request: (etag?: string) => Promise<ResponseWithEtag<T>>
@@ -64,10 +57,7 @@ async function cachedWithEtag<T>(
   }
 }
 
-/**
- * Caches a paginated collection, preserving whether it had to be cut short.
- * These endpoints span many requests, so a single ETag cannot describe them.
- */
+/** Caches a paginated collection, preserving whether it had to be cut short. */
 async function cachedPages<T>(
   cacheKey: string,
   fetchAll: () => Promise<PagedResult<T>>
@@ -82,10 +72,7 @@ async function cachedPages<T>(
   return result
 }
 
-/**
- * Drains a paginated iterator up to `MAX_HISTORY_PAGES`. A full final page at
- * the cap means GitHub still had more to give, which is reported as truncated.
- */
+/** Drains a paginated iterator up to `MAX_HISTORY_PAGES`. */
 async function collectPages<TPage, TItem>(
   iterator: AsyncIterable<{ data: TPage[] }>,
   map: (page: TPage[]) => TItem[]
@@ -175,8 +162,6 @@ export async function getStargazers(
 ): Promise<PagedResult<Stargazer>> {
   return cachedPages(`stargazers-${owner}-${repo}`, () =>
     collectPages(
-      // The star+json media type swaps the plain user payload for one carrying
-      // `starred_at`, which the generated response types do not narrow to.
       octokit.paginate.iterator(octokit.rest.activity.listStargazersForRepo, {
         owner,
         repo,
@@ -244,10 +229,7 @@ export async function getPullRequests(
   )
 }
 
-/**
- * Reads the last page number out of a Link header, which is how GitHub lets us
- * count a collection without downloading it.
- */
+/** Reads the last page number out of a Link header. */
 export function parseLastPage(link: string | undefined): number | null {
   if (!link) return null
   const match = link.match(/[?&]page=(\d+)[^>]*>;\s*rel="last"/)

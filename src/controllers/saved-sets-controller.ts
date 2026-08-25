@@ -3,10 +3,7 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit'
 const STORAGE_KEY = 'github-release-stats-sets'
 const UPDATE_FEEDBACK_MS = 2000
 
-/**
- * Owns the named repository sets the user can save and reload, together with
- * their localStorage persistence and the transient "Updated!" confirmation.
- */
+/** Owns the named repository sets the user can save and reload. */
 export class SavedSetsController implements ReactiveController {
   private host: ReactiveControllerHost
   private feedbackTimer?: ReturnType<typeof setTimeout>
@@ -57,7 +54,7 @@ export class SavedSetsController implements ReactiveController {
     this.persist()
   }
 
-  /** Same as {@link save}, but flashes a confirmation next to the set. */
+  /** Saves the set and flashes a confirmation next to it. */
   update(name: string, identifiers: string[]) {
     this.save(name, identifiers)
     this.justUpdated = name

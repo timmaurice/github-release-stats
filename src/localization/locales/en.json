@@ -94,7 +94,14 @@
     "clear": "Clear",
     "toggleTheme": "Toggle theme",
     "filterDependabot": "Filter Dependabot PRs",
-    "showTotalDownloads": "Show Total Downloads"
+    "showTotalDownloads": "Show Total Downloads",
+    "tokenChecking": "Checking…",
+    "tokenInvalid": "Token rejected by GitHub",
+    "tokenUnverified": "Could not verify",
+    "showToken": "Show token",
+    "hideToken": "Hide token",
+    "hidePreReleases": "Hide pre-releases",
+    "hidePreReleasesHint": "Excludes releases GitHub marks as a pre-release from the table, charts and download totals."
   },
   "modals": {
     "saveSetTitle": "Save Comparison Set",
@@ -130,7 +137,9 @@
     "networkError": "A network error occurred while checking the user.",
     "addRepoToSave": "Add at least one repository to save a set.",
     "copyLinkFailed": "Failed to copy link.",
-    "oops": "Oops!"
+    "oops": "Oops!",
+    "invalidToken": "GitHub rejected the access token. It may have expired or been revoked — check it in the settings.",
+    "repoForbidden": "Access to this repository was refused. The token may lack the required scope."
   },
   "pwa": {
     "installMessage": "Install this app for a better experience.",

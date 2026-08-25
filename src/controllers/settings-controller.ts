@@ -3,20 +3,28 @@ import { Octokit } from '@octokit/rest'
 
 export type ThemeSetting = 'light' | 'dark' | 'auto'
 
+export type TokenStatus =
+  'anonymous' | 'checking' | 'valid' | 'invalid' | 'unverified'
+
 const THEME_KEY = 'theme'
 const TOKEN_KEY = 'github-token'
 const FILTER_DEPENDABOT_KEY = 'filterDependabot'
 const SHOW_TOTAL_DOWNLOADS_KEY = 'showTotalDownloads'
+const HIDE_PRE_RELEASES_KEY = 'hidePreReleases'
 
 function isTheme(value: string | null): value is ThemeSetting {
   return value === 'light' || value === 'dark' || value === 'auto'
 }
 
-/**
- * Owns everything the user can configure: theme, API token (and therefore the
- * Octokit client) and the display toggles. Persisting to localStorage and
- * reacting to the system colour scheme live here rather than in the host.
- */
+function statusOf(error: unknown): number | undefined {
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const status = (error as { status: unknown }).status
+    return typeof status === 'number' ? status : undefined
+  }
+  return undefined
+}
+
+/** Owns the user's configuration and the Octokit client built from the token. */
 export class SettingsController implements ReactiveController {
   private host: ReactiveControllerHost
   private onTokenChange: () => void
@@ -24,8 +32,10 @@ export class SettingsController implements ReactiveController {
   octokit: Octokit
   theme: ThemeSetting = 'auto'
   githubToken = ''
+  tokenStatus: TokenStatus = 'anonymous'
   filterDependabot = false
   showTotalDownloads = true
+  hidePreReleases = false
 
   constructor(host: ReactiveControllerHost, onTokenChange: () => void) {
     this.host = host
@@ -52,6 +62,37 @@ export class SettingsController implements ReactiveController {
     if (storedDownloads !== null) {
       this.showTotalDownloads = storedDownloads === 'true'
     }
+
+    const storedPreReleases = localStorage.getItem(HIDE_PRE_RELEASES_KEY)
+    if (storedPreReleases !== null) {
+      this.hidePreReleases = storedPreReleases === 'true'
+    }
+
+    this.verifyToken()
+  }
+
+  /** Asks GitHub whether it accepts the token. */
+  async verifyToken() {
+    if (!this.githubToken) {
+      this.tokenStatus = 'anonymous'
+      this.host.requestUpdate()
+      return
+    }
+
+    this.tokenStatus = 'checking'
+    this.host.requestUpdate()
+
+    const octokit = this.octokit
+    try {
+      await octokit.rest.rateLimit.get()
+      if (octokit !== this.octokit) return
+      this.tokenStatus = 'valid'
+    } catch (error) {
+      if (octokit !== this.octokit) return
+      console.error('Failed to verify the GitHub token:', error)
+      this.tokenStatus = statusOf(error) === 401 ? 'invalid' : 'unverified'
+    }
+    this.host.requestUpdate()
   }
 
   hostConnected() {
@@ -101,6 +142,7 @@ export class SettingsController implements ReactiveController {
       localStorage.removeItem(TOKEN_KEY)
     }
     this.host.requestUpdate()
+    this.verifyToken()
     this.onTokenChange()
   }
 
@@ -113,6 +155,12 @@ export class SettingsController implements ReactiveController {
   setShowTotalDownloads(value: boolean) {
     this.showTotalDownloads = value
     localStorage.setItem(SHOW_TOTAL_DOWNLOADS_KEY, String(value))
+    this.host.requestUpdate()
+  }
+
+  setHidePreReleases(value: boolean) {
+    this.hidePreReleases = value
+    localStorage.setItem(HIDE_PRE_RELEASES_KEY, String(value))
     this.host.requestUpdate()
   }
 }

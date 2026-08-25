@@ -29,3 +29,12 @@
 .sortable-chosen {
   cursor: grabbing !important;
 }
+
+/* Negative margins absorb the padding so the pill keeps its size. */
+#repo-pills-container .btn-close {
+  cursor: pointer;
+  padding: 0.5em;
+  margin-top: -0.25em;
+  margin-bottom: -0.25em;
+  margin-right: -0.25em;
+}

@@ -94,7 +94,14 @@
     "clear": "清除",
     "toggleTheme": "切换主题",
     "filterDependabot": "过滤 Dependabot PR",
-    "showTotalDownloads": "显示总下载量"
+    "showTotalDownloads": "显示总下载量",
+    "tokenChecking": "正在检查…",
+    "tokenInvalid": "令牌被 GitHub 拒绝",
+    "tokenUnverified": "无法验证",
+    "showToken": "显示令牌",
+    "hideToken": "隐藏令牌",
+    "hidePreReleases": "隐藏预发布版本",
+    "hidePreReleasesHint": "将 GitHub 标记为预发布的版本从表格、图表和下载总数中排除。"
   },
   "modals": {
     "saveSetTitle": "保存比较集合",
@@ -130,7 +137,9 @@
     "networkError": "检查用户时发生网络错误。",
     "addRepoToSave": "请至少添加一个仓库以保存集合。",
     "copyLinkFailed": "复制链接失败。",
-    "oops": "哎呀！"
+    "oops": "哎呀！",
+    "invalidToken": "GitHub 拒绝了该访问令牌。它可能已过期或被撤销 — 请在设置中检查。",
+    "repoForbidden": "访问该仓库被拒绝。令牌可能缺少所需的权限范围。"
   },
   "pwa": {
     "installMessage": "安装此应用以获得更好的体验。",

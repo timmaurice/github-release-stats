@@ -48,20 +48,18 @@ import './components/index.scss'
 export class GithubReleaseStats extends LitElement {
   private localize = new LocalizeController(this)
 
-  /** User configuration: theme, API token, display toggles. */
   readonly settings = new SettingsController(this, () => {
     if (this.data.repos.length > 0) {
       this.data.fetchAll()
     }
   })
 
-  /** Named repository sets the user can save and reload. */
   readonly sets = new SavedSetsController(this)
 
-  /** The repository list and everything fetched for it. */
   readonly data = new RepoDataController(this, {
     getOctokit: () => this.settings.octokit,
     getFilterDependabot: () => this.settings.filterDependabot,
+    getHidePreReleases: () => this.settings.hidePreReleases,
     t: (key, replacements) => this.localize.t(key, replacements),
     onOrderChange: () => this._updateURL(),
   })
@@ -175,6 +173,9 @@ export class GithubReleaseStats extends LitElement {
         fallbackClass: 'sortable-fallback',
         forceFallback: true, // Forces custom drag image to allow rotation
         fallbackOnBody: true, // Appends the dragged clone to body so it isn't clipped by hidden overflows
+        // Interactive children must opt out, or their click starts a drag.
+        filter: '.btn-close',
+        preventOnFilter: false,
         onEnd: (evt) => {
           if (
             evt.oldIndex !== undefined &&
@@ -261,9 +262,7 @@ export class GithubReleaseStats extends LitElement {
 
   private _updateURL() {
     const url = new URL(window.location.href)
-    // `order` is the source of truth for the display order, but it only holds
-    // repositories that loaded. Repositories that failed are appended so a
-    // shared link still carries them and the user can retry or remove them.
+    // Failed repositories are appended so a shared link still carries them.
     const failed = this.data.failedIdentifiers.filter(
       (id) => !this.data.order.includes(id)
     )
@@ -543,7 +542,6 @@ export class GithubReleaseStats extends LitElement {
     this.sets.update(setName, this.data.identifiers)
   }
 
-  /** Returns the summary rows in the order currently shown on screen. */
   private _orderedSummaryData(): RepoSummary[] {
     return this.data.order
       .map((identifier) =>
@@ -1408,10 +1406,16 @@ export class GithubReleaseStats extends LitElement {
           <settings-modal
             .filterDependabot=${this.settings.filterDependabot}
             .showTotalDownloads=${this.settings.showTotalDownloads}
+            .hidePreReleases=${this.settings.hidePreReleases}
             .githubToken=${this.settings.githubToken}
+            .tokenStatus=${this.settings.tokenStatus}
             .theme=${this.settings.theme}
             @filter-dependabot-change=${(e: CustomEvent<boolean>) => {
               this.settings.setFilterDependabot(e.detail)
+              this.data.fetchAll()
+            }}
+            @hide-pre-releases-change=${(e: CustomEvent<boolean>) => {
+              this.settings.setHidePreReleases(e.detail)
               this.data.fetchAll()
             }}
             @show-total-downloads-change=${(e: CustomEvent<boolean>) => {

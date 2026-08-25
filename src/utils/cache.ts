@@ -1,19 +1,10 @@
 import { openDB, type IDBPDatabase } from 'idb'
 
 const DB_NAME = 'github-release-stats-db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STORE_NAME = 'api-cache'
 
-/**
- * A single cached API response.
- *
- * `etag` is the value GitHub returned in the ETag header. Sending it back as
- * `If-None-Match` lets GitHub answer 304 Not Modified, which does not count
- * against the rate limit.
- *
- * `truncated` records that we stopped paginating before the collection was
- * exhausted, so callers can tell the user their data is incomplete.
- */
+/** A single cached API response. */
 export interface CacheEntry<T> {
   timestamp: number
   data: T
@@ -32,9 +23,11 @@ async function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME)
+        // Bump DB_VERSION whenever a cached payload changes shape.
+        if (db.objectStoreNames.contains(STORE_NAME)) {
+          db.deleteObjectStore(STORE_NAME)
         }
+        db.createObjectStore(STORE_NAME)
       },
     })
   }
@@ -70,10 +63,7 @@ export async function setCache<T>(
   }
 }
 
-/**
- * Marks an entry as fresh again without rewriting its payload. Used after a
- * 304 Not Modified, where GitHub confirmed the cached copy is still current.
- */
+/** Marks an entry as fresh again without rewriting its payload. */
 export async function touchCache(key: string): Promise<void> {
   try {
     const db = await getDB()

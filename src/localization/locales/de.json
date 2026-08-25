@@ -86,7 +86,7 @@
     "themeLight": "Heller Modus",
     "themeDark": "Dunkler Modus",
     "apiAuth": "API-Authentifizierung",
-    "apiAuthDescription": "Stellen Sie ein <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">persönliches GitHub-Zugriffstoken</a> bereit, um das API-Ratenlimit von 60 auf 5.000 Anfragen pro Stunde zu erhöhen. Das Token wird nur im Sitzungsspeicher Ihres Browsers gespeichert.",
+    "apiAuthDescription": "Stellen Sie ein <a href=\"https://github.com/settings/tokens/new?scopes=repo\" target=\"_blank\" rel=\"noopener noreferrer\">persönliches GitHub-Zugriffstoken</a> bereit, um das API-Ratenlimit von 60 auf 5.000 Anfragen pro Stunde zu erhöhen. Das Token wird nur im lokalen Speicher Ihres Browsers gespeichert.",
     "status": "Status:",
     "authenticated": "Authentifiziert",
     "anonymous": "Anonym",
@@ -94,7 +94,14 @@
     "clear": "Löschen",
     "toggleTheme": "Theme umschalten",
     "filterDependabot": "Dependabot PRs herausfiltern",
-    "showTotalDownloads": "Downloads gesamt anzeigen"
+    "showTotalDownloads": "Downloads gesamt anzeigen",
+    "tokenChecking": "Wird geprüft …",
+    "tokenInvalid": "Token von GitHub abgelehnt",
+    "tokenUnverified": "Nicht überprüfbar",
+    "showToken": "Token anzeigen",
+    "hideToken": "Token verbergen",
+    "hidePreReleases": "Vorabversionen ausblenden",
+    "hidePreReleasesHint": "Schließt von GitHub als Vorabversion markierte Releases aus Tabelle, Diagrammen und Download-Summen aus."
   },
   "modals": {
     "saveSetTitle": "Vergleichs-Set speichern",
@@ -130,7 +137,9 @@
     "networkError": "Beim Überprüfen des Benutzers ist ein Netzwerkfehler aufgetreten.",
     "addRepoToSave": "Fügen Sie mindestens ein Repository hinzu, um ein Set zu speichern.",
     "copyLinkFailed": "Link konnte nicht kopiert werden.",
-    "oops": "Hoppla!"
+    "oops": "Hoppla!",
+    "invalidToken": "GitHub hat das Zugriffstoken abgelehnt. Möglicherweise ist es abgelaufen oder wurde widerrufen – bitte in den Einstellungen prüfen.",
+    "repoForbidden": "Der Zugriff auf dieses Repository wurde verweigert. Dem Token fehlt möglicherweise die nötige Berechtigung."
   },
   "pwa": {
     "installMessage": "Installieren Sie diese App für ein besseres Erlebnis.",

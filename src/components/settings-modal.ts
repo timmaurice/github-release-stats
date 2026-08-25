@@ -2,6 +2,7 @@ import { LitElement, html } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 import { LocalizeController } from '../localization/localize-controller'
+import type { TokenStatus } from '../controllers/settings-controller'
 import { getLocale } from '../localization/registry'
 
 @customElement('settings-modal')
@@ -10,10 +11,13 @@ export class SettingsModal extends LitElement {
 
   @property({ type: Boolean }) filterDependabot = false
   @property({ type: Boolean }) showTotalDownloads = true
+  @property({ type: Boolean }) hidePreReleases = false
   @property({ type: String }) githubToken = ''
+  @property({ type: String }) tokenStatus: TokenStatus = 'anonymous'
   @property({ type: String }) theme = 'light'
 
   @state() private _localTokenInput = ''
+  @state() private _tokenVisible = false
 
   protected createRenderRoot() {
     return this // Disable shadow DOM for Bootstrap
@@ -23,6 +27,17 @@ export class SettingsModal extends LitElement {
     if (changedProperties.has('githubToken')) {
       this._localTokenInput = this.githubToken
     }
+  }
+
+  private _handleHidePreReleasesChange(e: Event) {
+    const target = e.target as HTMLInputElement
+    this.dispatchEvent(
+      new CustomEvent('hide-pre-releases-change', { detail: target.checked })
+    )
+  }
+
+  private _toggleTokenVisibility() {
+    this._tokenVisible = !this._tokenVisible
   }
 
   private _handleFilterDependabotChange(e: Event) {
@@ -63,7 +78,44 @@ export class SettingsModal extends LitElement {
 
   private _handleClearToken() {
     this._localTokenInput = ''
+    this._tokenVisible = false
     this.dispatchEvent(new CustomEvent('clear-token'))
+  }
+
+  private _renderTokenStatus() {
+    const badge = (variant: string, icon: string, key: string) =>
+      html`<span class="badge ${variant} ms-2"
+        ><i class="bi ${icon} me-1"></i> ${this.localize.t(key)}</span
+      >`
+
+    switch (this.tokenStatus) {
+      case 'valid':
+        return badge(
+          'bg-success',
+          'bi-check-circle-fill',
+          'settings.authenticated'
+        )
+      case 'checking':
+        return badge(
+          'bg-secondary',
+          'bi-hourglass-split',
+          'settings.tokenChecking'
+        )
+      case 'invalid':
+        return badge(
+          'bg-danger',
+          'bi-exclamation-triangle-fill',
+          'settings.tokenInvalid'
+        )
+      case 'unverified':
+        return badge(
+          'bg-warning text-dark',
+          'bi-question-circle-fill',
+          'settings.tokenUnverified'
+        )
+      default:
+        return badge('bg-secondary', 'bi-x-circle-fill', 'settings.anonymous')
+    }
   }
 
   render() {
@@ -265,6 +317,22 @@ export class SettingsModal extends LitElement {
                   </label>
                 </div>
 
+                <div class="form-check form-switch mb-3">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="hidePreReleasesSwitch"
+                    .checked=${this.hidePreReleases}
+                    @change=${this._handleHidePreReleasesChange}
+                  />
+                  <label class="form-check-label" for="hidePreReleasesSwitch">
+                    ${this.localize.t('settings.hidePreReleases')}
+                  </label>
+                  <div class="form-text">
+                    ${this.localize.t('settings.hidePreReleasesHint')}
+                  </div>
+                </div>
+
                 <div class="form-check form-switch mb-4">
                   <input
                     class="form-check-input"
@@ -294,29 +362,42 @@ export class SettingsModal extends LitElement {
               </p>
               <div class="mb-3">
                 <strong>${this.localize.t('settings.status')}</strong>
-                ${
-                  this.githubToken
-                    ? html`<span class="badge bg-success ms-2"
-                        ><i class="bi bi-check-circle-fill me-1"></i>
-                        ${this.localize.t('settings.authenticated')}</span
-                      >`
-                    : html`<span class="badge bg-secondary ms-2"
-                        ><i class="bi bi-x-circle-fill me-1"></i>
-                        ${this.localize.t('settings.anonymous')}</span
-                      >`
-                }
+                ${this._renderTokenStatus()}
               </div>
               <form @submit=${this._handleSaveTokenFormSubmit}>
                 <div class="input-group">
                   <input
                     id="token-input"
-                    type="password"
+                    type=${this._tokenVisible ? 'text' : 'password'}
                     class="form-control"
                     placeholder="ghp_..."
                     autocomplete="new-password"
+                    spellcheck="false"
                     .value=${this._localTokenInput}
                     @input=${this._handleTokenInput}
                   />
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    aria-label=${this.localize.t(
+                      this._tokenVisible
+                        ? 'settings.hideToken'
+                        : 'settings.showToken'
+                    )}
+                    title=${this.localize.t(
+                      this._tokenVisible
+                        ? 'settings.hideToken'
+                        : 'settings.showToken'
+                    )}
+                    aria-pressed=${this._tokenVisible}
+                    @click=${this._toggleTokenVisibility}
+                  >
+                    <i
+                      class="bi ${
+                        this._tokenVisible ? 'bi-eye-slash' : 'bi-eye'
+                      }"
+                    ></i>
+                  </button>
                   <button type="submit" class="btn btn-primary">
                     ${this.localize.t('settings.save')}
                   </button>

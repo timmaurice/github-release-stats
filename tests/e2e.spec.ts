@@ -411,6 +411,17 @@ test.describe('GitHub Release Stats E2E', () => {
   })
 
   test('should handle API authentication', async ({ page }) => {
+    // The status reflects GitHub's answer, so the answer has to be mocked.
+    await page.route('https://api.github.com/rate_limit', async (route) => {
+      await route.fulfill({
+        json: {
+          resources: {
+            core: { limit: 5000, remaining: 4999, reset: 9999999999 },
+          },
+        },
+      })
+    })
+
     // Open settings modal
     const settingsBtn = page.locator('button[data-bs-target="#settingsModal"]')
     await settingsBtn.click()
@@ -430,6 +441,43 @@ test.describe('GitHub Release Stats E2E', () => {
 
     // Verify it shows as Authenticated
     await expect(page.locator('#settingsModal .badge.bg-success')).toBeVisible()
+  })
+
+  test('reports a token that GitHub rejects instead of claiming authenticated', async ({
+    page,
+  }) => {
+    await page.route('https://api.github.com/rate_limit', async (route) => {
+      await route.fulfill({ status: 401, json: { message: 'Bad credentials' } })
+    })
+
+    await page.locator('button[data-bs-target="#settingsModal"]').click()
+    await expect(page.locator('#settingsModal')).toBeVisible()
+
+    await page.locator('#token-input').fill('ghp_revokedtoken123')
+    await page.locator('#settingsModal button[type="submit"]').click()
+
+    // A stored-but-rejected token must not read as authenticated.
+    await expect(page.locator('#settingsModal .badge.bg-danger')).toBeVisible()
+    await expect(page.locator('#settingsModal .badge.bg-success')).toHaveCount(
+      0
+    )
+  })
+
+  test('can reveal and re-hide the access token', async ({ page }) => {
+    await page.locator('button[data-bs-target="#settingsModal"]').click()
+    await expect(page.locator('#settingsModal')).toBeVisible()
+
+    const tokenInput = page.locator('#token-input')
+    await tokenInput.fill('ghp_visibletoken123')
+    await expect(tokenInput).toHaveAttribute('type', 'password')
+
+    const toggle = page.locator('#settingsModal button[aria-pressed]')
+    await toggle.click()
+    await expect(tokenInput).toHaveAttribute('type', 'text')
+    await expect(tokenInput).toHaveValue('ghp_visibletoken123')
+
+    await toggle.click()
+    await expect(tokenInput).toHaveAttribute('type', 'password')
   })
 
   test('should save and load a repository set', async ({ page }) => {
@@ -487,6 +535,187 @@ test.describe('GitHub Release Stats E2E', () => {
     await expect(
       page.locator('button', { hasText: 'Pin to Dashboard' })
     ).toBeVisible()
+  })
+
+  test('removes a repository when its close button is clicked, even with drift', async ({
+    page,
+  }) => {
+    const usernameInput = page.locator('#username-input').first()
+    const repoInput = page.locator('#repository-input').first()
+    const submitButton = page
+      .locator('search-form button[type="submit"]')
+      .first()
+
+    await usernameInput.fill('microsoft')
+    await repoInput.fill('vscode')
+    await submitButton.click()
+    await usernameInput.fill('facebook')
+    await repoInput.fill('react')
+    await submitButton.click()
+
+    const pills = page.locator('#repo-pills-container .badge')
+    await expect(pills).toHaveCount(2, { timeout: 15000 })
+
+    const closeButton = page
+      .locator('#repo-pills-container .badge', { hasText: 'microsoft/vscode' })
+      .locator('.btn-close')
+
+    const box = await closeButton.boundingBox()
+    expect(box!.width).toBeGreaterThanOrEqual(24)
+    expect(box!.height).toBeGreaterThanOrEqual(24)
+
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(
+      box!.x + box!.width / 2 + 3,
+      box!.y + box!.height / 2 + 2
+    )
+    await page.mouse.up()
+
+    await expect(pills).toHaveCount(1)
+    await expect(pills.first()).toContainText('facebook/react')
+  })
+
+  test('still reorders repositories by dragging a pill', async ({
+    page,
+    browserName,
+  }) => {
+    // SortableJS drags via its own fallback implementation, which WebKit does
+    // not drive from synthetic mouse events. This fails there with or without
+    // the drag filter, so it is a harness limit rather than a browser bug.
+    test.skip(
+      browserName === 'webkit',
+      'synthetic drag does not reach the SortableJS fallback in WebKit'
+    )
+
+    const usernameInput = page.locator('#username-input').first()
+    const repoInput = page.locator('#repository-input').first()
+    const submitButton = page
+      .locator('search-form button[type="submit"]')
+      .first()
+
+    await usernameInput.fill('microsoft')
+    await repoInput.fill('vscode')
+    await submitButton.click()
+    await usernameInput.fill('facebook')
+    await repoInput.fill('react')
+    await submitButton.click()
+
+    const pills = page.locator('#repo-pills-container .badge')
+    await expect(pills).toHaveCount(2, { timeout: 15000 })
+    const initial = await pills.allTextContents()
+
+    const source = await pills.nth(1).boundingBox()
+    const target = await pills.nth(0).boundingBox()
+
+    await page.mouse.move(source!.x + 20, source!.y + source!.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(target!.x + 40, target!.y + target!.height / 2, {
+      steps: 15,
+    })
+    await page.mouse.move(target!.x + 5, target!.y + target!.height / 2, {
+      steps: 10,
+    })
+    await page.mouse.up()
+
+    await expect.poll(() => pills.allTextContents()).not.toEqual(initial)
+  })
+
+  test('hides pre-releases from the table and download totals when enabled', async ({
+    page,
+  }) => {
+    await page.route(
+      'https://api.github.com/repos/microsoft/vscode/releases*',
+      async (route) => {
+        await route.fulfill({
+          json: [
+            {
+              tag_name: 'v2.0.0-beta.1',
+              name: 'Beta',
+              prerelease: true,
+              published_at: '2026-03-01T00:00:00Z',
+              assets: [{ download_count: 40, size: 100 }],
+            },
+            {
+              tag_name: 'v1.9.0',
+              name: 'Stable',
+              prerelease: false,
+              published_at: '2026-02-01T00:00:00Z',
+              assets: [{ download_count: 600, size: 100 }],
+            },
+          ],
+        })
+      }
+    )
+
+    await page.locator('#username-input').first().fill('microsoft')
+    await page.locator('#repository-input').first().fill('vscode')
+    await page.locator('search-form button[type="submit"]').first().click()
+
+    const row = page
+      .locator('summary-table tr', { hasText: 'microsoft/vscode' })
+      .first()
+    await expect(row).toBeVisible({ timeout: 15000 })
+
+    // By default the pre-release is the newest thing on offer.
+    await expect(row).toContainText('v2.0.0-beta.1')
+    await expect(row).toContainText('640')
+
+    await page.locator('button[data-bs-target="#settingsModal"]').click()
+    await expect(page.locator('#settingsModal')).toBeVisible()
+    await page.locator('#hidePreReleasesSwitch').click()
+    await page.locator('#settingsModal .modal-footer button').click()
+
+    // The stable release becomes the latest, and its downloads no longer count.
+    await expect(row).toContainText('v1.9.0')
+    await expect(row).toContainText('600')
+    await expect(row).not.toContainText('beta')
+  })
+
+  test('recovers from a cache written by an older version of the app', async ({
+    page,
+  }) => {
+    const pageErrors: string[] = []
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+
+    // Recreate the database exactly as an older build left it: version 1, with
+    // the whole Octokit response stored under the releases key rather than the
+    // releases array the current build expects.
+    await page.evaluate(async () => {
+      await new Promise((resolve) => {
+        const del = indexedDB.deleteDatabase('github-release-stats-db')
+        del.onsuccess = del.onerror = del.onblocked = resolve
+      })
+      await new Promise((resolve, reject) => {
+        const req = indexedDB.open('github-release-stats-db', 1)
+        req.onupgradeneeded = () => req.result.createObjectStore('api-cache')
+        req.onsuccess = () => {
+          const db = req.result
+          const tx = db.transaction('api-cache', 'readwrite')
+          tx.objectStore('api-cache').put(
+            {
+              timestamp: Date.now(),
+              data: { status: 200, headers: {}, url: 'x', data: [] },
+            },
+            'releases-microsoft-vscode'
+          )
+          tx.oncomplete = () => {
+            db.close()
+            resolve(null)
+          }
+          tx.onerror = reject
+        }
+        req.onerror = reject
+      })
+    })
+
+    await page.goto('/?repos=microsoft/vscode')
+
+    const summaryTable = page.locator('summary-table')
+    await expect(
+      summaryTable.locator('td', { hasText: 'microsoft/vscode' })
+    ).toBeVisible({ timeout: 15000 })
+    expect(pageErrors).toEqual([])
   })
 
   test('keeps the working repositories when one of them fails to load', async ({
