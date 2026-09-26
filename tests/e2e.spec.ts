@@ -546,14 +546,18 @@ test.describe('GitHub Release Stats E2E', () => {
       .locator('search-form button[type="submit"]')
       .first()
 
+    const pills = page.locator('#repo-pills-container .badge')
+
     await usernameInput.fill('microsoft')
     await repoInput.fill('vscode')
     await submitButton.click()
+    // Wait for the first repository to settle; adding both back to back races
+    // the re-render and the second entry can be dropped.
+    await expect(pills).toHaveCount(1, { timeout: 15000 })
+
     await usernameInput.fill('facebook')
     await repoInput.fill('react')
     await submitButton.click()
-
-    const pills = page.locator('#repo-pills-container .badge')
     await expect(pills).toHaveCount(2, { timeout: 15000 })
 
     const closeButton = page
@@ -594,15 +598,18 @@ test.describe('GitHub Release Stats E2E', () => {
       .locator('search-form button[type="submit"]')
       .first()
 
+    const pills = page.locator('#repo-pills-container .badge')
+
     await usernameInput.fill('microsoft')
     await repoInput.fill('vscode')
     await submitButton.click()
+    // Wait for the first repository to settle; adding both back to back races
+    // the re-render and the second entry can be dropped.
+    await expect(pills).toHaveCount(1, { timeout: 15000 })
+
     await usernameInput.fill('facebook')
     await repoInput.fill('react')
     await submitButton.click()
-
-    const pills = page.locator('#repo-pills-container .badge')
-    await expect(pills).toHaveCount(2, { timeout: 15000 })
     const initial = await pills.allTextContents()
 
     const source = await pills.nth(1).boundingBox()
@@ -619,6 +626,72 @@ test.describe('GitHub Release Stats E2E', () => {
     await page.mouse.up()
 
     await expect.poll(() => pills.allTextContents()).not.toEqual(initial)
+  })
+
+  test('zooms the chart into a dragged range', async ({ page }) => {
+    await page.route(
+      'https://api.github.com/repos/microsoft/vscode/releases*',
+      async (route) => {
+        await route.fulfill({
+          json: [
+            '2026-08-01',
+            '2026-07-01',
+            '2026-06-01',
+            '2026-05-01',
+            '2026-04-01',
+          ].map((date, i) => ({
+            tag_name: `v1.${5 - i}.0`,
+            name: `Release ${5 - i}`,
+            prerelease: false,
+            published_at: `${date}T00:00:00Z`,
+            assets: [{ download_count: 100 * (5 - i), size: 100 }],
+          })),
+        })
+      }
+    )
+
+    await page.locator('#username-input').first().fill('microsoft')
+    await page.locator('#repository-input').first().fill('vscode')
+    await page.locator('search-form button[type="submit"]').first().click()
+
+    const canvas = page.locator('chart-display canvas')
+    await expect(canvas).toBeVisible({ timeout: 15000 })
+
+    const geometry = async () =>
+      page.evaluate(() => {
+        const chart = document.querySelector('chart-display')?._chart
+        if (!chart) return null
+        const rect = chart.canvas.getBoundingClientRect()
+        const area = chart.chartArea
+        return {
+          span: chart.scales.x.max - chart.scales.x.min,
+          left: rect.left + area.left,
+          right: rect.left + area.right,
+          y: rect.top + (area.top + area.bottom) / 2,
+        }
+      })
+
+    const before = await geometry()
+    expect(before).not.toBeNull()
+
+    const width = before!.right - before!.left
+    const from = before!.left + width * 0.35
+    const to = before!.left + width * 0.65
+
+    await page.mouse.move(from, before!.y)
+    await page.mouse.down()
+    await page.mouse.move(to, before!.y, { steps: 10 })
+    await page.mouse.up()
+
+    await expect
+      .poll(async () => (await geometry())!.span < before!.span * 0.6)
+      .toBe(true)
+
+    // Reset Zoom puts the full range back.
+    await page.locator('button', { hasText: 'Reset Zoom' }).first().click()
+    await expect
+      .poll(async () => (await geometry())!.span)
+      .toBeGreaterThan(before!.span * 0.9)
   })
 
   test('hides pre-releases from the table and download totals when enabled', async ({

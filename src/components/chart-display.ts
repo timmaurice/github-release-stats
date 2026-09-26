@@ -125,6 +125,7 @@ interface ComponentZoomOptions {
   pan: {
     enabled: boolean
     mode: 'x' | 'y' | 'xy'
+    modifierKey?: 'ctrl' | 'alt' | 'shift' | 'meta'
   }
   zoom: {
     wheel: {
@@ -132,6 +133,12 @@ interface ComponentZoomOptions {
     }
     pinch: {
       enabled: boolean
+    }
+    drag?: {
+      enabled: boolean
+      backgroundColor?: string
+      borderColor?: string
+      borderWidth?: number
     }
     mode: 'x' | 'y' | 'xy'
     onZoom?: (context: { chart: Chart }) => void
@@ -238,6 +245,11 @@ export class ChartDisplay extends LitElement {
     this._chart?.resetZoom()
   }
 
+  /** True for mouse-driven pointers, false for touch. */
+  private _hasFinePointer() {
+    return window.matchMedia?.('(pointer: fine)').matches ?? true
+  }
+
   private _getZoomOptions() {
     const options: ComponentZoomOptions = {
       pan: {
@@ -253,6 +265,16 @@ export class ChartDisplay extends LitElement {
         },
         mode: 'x' as const,
       },
+    }
+
+    if (this._hasFinePointer()) {
+      options.zoom.drag = {
+        enabled: true,
+        backgroundColor: 'rgba(13, 110, 253, 0.15)',
+        borderColor: 'rgba(13, 110, 253, 0.6)',
+        borderWidth: 1,
+      }
+      options.pan.modifierKey = 'shift'
     }
 
     if (this.limitZoomOut) {

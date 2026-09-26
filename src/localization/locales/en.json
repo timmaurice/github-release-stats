@@ -56,7 +56,7 @@
     "linear": "Linear",
     "logarithmic": "Logarithmic",
     "resetZoom": "Reset Zoom",
-    "zoomHint": "Use mouse wheel to zoom, and click and drag to pan.",
+    "zoomHint": "Drag across the chart to zoom into that range. Shift-drag to pan, scroll to zoom out, or use Reset Zoom.",
     "dataTruncated": "GitHub only lets us page through part of a repository's history, so the charts for {repos} are based on an incomplete series."
   },
   "releaseDetails": {

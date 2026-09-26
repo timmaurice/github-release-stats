@@ -56,7 +56,7 @@
     "linear": "Linear",
     "logarithmic": "Logarithmisch",
     "resetZoom": "Zoom zurücksetzen",
-    "zoomHint": "Zum Zoomen das Mausrad verwenden und zum Verschieben klicken und ziehen.",
+    "zoomHint": "Ziehen Sie einen Bereich im Diagramm auf, um hineinzuzoomen. Mit Umschalt+Ziehen verschieben, mit dem Mausrad herauszoomen oder „Zoom zurücksetzen“ verwenden.",
     "dataTruncated": "GitHub lässt uns nur einen Teil der Historie abrufen. Die Diagramme für {repos} beruhen daher auf unvollständigen Daten."
   },
   "releaseDetails": {

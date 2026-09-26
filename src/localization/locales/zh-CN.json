@@ -56,7 +56,7 @@
     "linear": "线性",
     "logarithmic": "对数",
     "resetZoom": "重置缩放",
-    "zoomHint": "使用鼠标滚轮缩放，点击并拖动平移。",
+    "zoomHint": "在图表上拖动以放大该区间。按住 Shift 拖动可平移，滚动滚轮可缩小，或使用“重置缩放”。",
     "dataTruncated": "GitHub 仅允许翻阅部分历史记录，因此 {repos} 的图表基于不完整的数据。"
   },
   "releaseDetails": {
